@@ -127,8 +127,8 @@ export function Sidebar({
       className={cn(
         "flex flex-col justify-between border-r border-stone-200/90 bg-[#FCFBF8] text-stone-800 shadow-[2px_0_12px_rgba(44,74,62,0.03)] z-40 select-none",
         isMobile
-          ? "h-full min-h-screen w-full overflow-y-auto"
-          : "hidden md:flex sticky top-0 h-screen w-64 shrink-0 overflow-y-auto"
+          ? "h-full min-h-dvh w-full overflow-y-auto"
+          : "hidden md:flex sticky top-0 h-screen md:h-dvh min-h-screen w-64 shrink-0 overflow-y-auto"
       )}
     >
       {/* Top Part: Brand + New Lead CTA + Nav */}

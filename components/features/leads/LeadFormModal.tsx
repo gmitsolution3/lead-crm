@@ -20,7 +20,6 @@ import {
   Sparkles,
   MessageCircle,
   FileText,
-  FolderKanban,
   CheckCircle2,
   AlertCircle,
 } from "lucide-react";

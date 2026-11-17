@@ -3,6 +3,7 @@ import { mongodbAdapter } from "@better-auth/mongo-adapter";
 import { admin, bearer } from "better-auth/plugins";
 import { nextCookies } from "better-auth/next-js";
 import { APIError } from "better-auth/api";
+import { ObjectId } from "mongodb";
 import { client, db } from "./mongodb";
 
 export const auth = betterAuth({
@@ -67,24 +68,40 @@ export const auth = betterAuth({
     session: {
       create: {
         before: async (session) => {
-          try {
-            // Query the user to verify role
-            const user = await db.collection("user").findOne({
-              $or: [{ id: session.userId }, { _id: session.userId as any }],
-            });
+          let userQuery: any = { id: session.userId };
+          if (ObjectId.isValid(session.userId)) {
+            userQuery = {
+              $or: [
+                { _id: new ObjectId(session.userId) },
+                { id: session.userId },
+                { _id: session.userId },
+              ],
+            };
+          }
 
-            // Block any non-admin from acquiring a session
-            if (user && user.role !== "admin") {
-              throw new APIError("FORBIDDEN", {
-                message:
-                  "Account Pending Approval: Your account has been registered, but requires an Administrator to promote your role to admin before you can sign in.",
-              });
-            }
-          } catch (err: any) {
-            if (err?.message?.includes("Account Pending Approval")) {
-              throw err;
-            }
-            console.warn("Session validation hook warning:", err);
+          const user = await db.collection("user").findOne(userQuery);
+
+          if (!user) {
+            throw new APIError("FORBIDDEN", {
+              message: "Account not found.",
+            });
+          }
+
+          // Block banned users from acquiring a session
+          if (user.banned) {
+            throw new APIError("FORBIDDEN", {
+              message: `Account Banned: ${
+                user.banReason || "Your account has been suspended by an administrator."
+              }`,
+            });
+          }
+
+          // Strict Admin Gate: Only "admin" role can ever acquire an active session
+          if (user.role !== "admin") {
+            throw new APIError("FORBIDDEN", {
+              message:
+                "Account Pending Approval: Your account has been registered, but requires an Administrator to promote your role to admin before you can sign in.",
+            });
           }
 
           return { data: session };

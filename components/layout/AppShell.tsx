@@ -37,7 +37,7 @@ export function AppShell({
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   return (
-    <div className="relative flex min-h-screen w-full bg-[#F5F2ED] text-stone-900 selection:bg-sage-200">
+    <div className="relative flex min-h-screen w-full bg-[#F5F2ED] text-stone-900 selection:bg-sage-200 items-stretch">
       {/* Desktop Sticky Sidebar (always reaches top-to-bottom of viewport) */}
       <Sidebar
         activeTab={activeTab}
@@ -50,7 +50,7 @@ export function AppShell({
 
       {/* Mobile Drawer */}
       <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
-        <SheetContent side="left" className="p-0 w-72 h-full bg-[#FCFBF8]">
+        <SheetContent side="left" className="p-0 gap-0 w-72 h-full max-h-screen bg-[#FCFBF8] border-r border-stone-200 overflow-hidden">
           <Sidebar
             activeTab={activeTab}
             onTabChange={onTabChange}

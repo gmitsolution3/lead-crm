@@ -25,11 +25,12 @@ export function RecentActivityFeed({
   activities,
   onSelectLeadByName,
 }: RecentActivityFeedProps) {
-  const [mounted, setMounted] = React.useState(false);
+  const isClient = React.useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
 
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
   const getActionBadge = (action: ActivityEvent["action"]) => {
     switch (action) {
       case "captured":
@@ -111,7 +112,7 @@ export function RecentActivityFeed({
 
               <div className="mt-2 sm:mt-0 flex items-center gap-1.5 text-xs text-stone-400 pl-8 sm:pl-0">
                 <Clock className="h-3.5 w-3.5" />
-                <span>{mounted ? formatRelativeTime(event.timestamp) : "Recently"}</span>
+                <span>{isClient ? formatRelativeTime(event.timestamp) : "Recently"}</span>
               </div>
             </motion.div>
           ))}

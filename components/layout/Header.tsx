@@ -7,8 +7,6 @@ import {
   RefreshCw,
   Menu,
   Plus,
-  ShieldCheck,
-  User,
   LogOut,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -16,7 +14,6 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -46,7 +43,6 @@ export function Header({
 }: HeaderProps) {
   const router = useRouter();
   const { data: session } = useSession();
-  const userRole = (session?.user as any)?.role || "admin";
 
   const handleSignOut = async () => {
     try {
@@ -154,7 +150,7 @@ export function Header({
                   <span className="text-[10px] text-stone-400">2m ago</span>
                 </div>
                 <p className="text-xs text-stone-600 mt-0.5">
-                  12 leads extracted from Google Maps for "Specialty Organic Cafes".
+                  12 leads extracted from Google Maps for &ldquo;Specialty Organic Cafes&rdquo;.
                 </p>
               </div>
 
@@ -166,7 +162,7 @@ export function Header({
                   <span className="text-[10px] text-stone-400">18m ago</span>
                 </div>
                 <p className="text-xs text-stone-600 mt-0.5">
-                  Found Instagram & WhatsApp for "Wild Meadow Herbal Apothecary".
+                  Found Instagram &amp; WhatsApp for &ldquo;Wild Meadow Herbal Apothecary&rdquo;.
                 </p>
               </div>
 
@@ -178,7 +174,7 @@ export function Header({
                   <span className="text-[10px] text-stone-400">1h ago</span>
                 </div>
                 <p className="text-xs text-stone-600 mt-0.5">
-                  "Biophilic Interior Designers San Francisco" group saved.
+                  &ldquo;Biophilic Interior Designers San Francisco&rdquo; group saved.
                 </p>
               </div>
             </div>

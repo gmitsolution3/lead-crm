@@ -51,7 +51,7 @@ export function SearchGroupCard({
             Target Search Query
           </span>
           <h3 className="mt-1 text-lg font-bold text-botanical-900 leading-snug group-hover:text-botanical-700 transition-colors">
-            "{group.query}"
+            &ldquo;{group.query}&rdquo;
           </h3>
         </div>
 

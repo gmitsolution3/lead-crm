@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useSession, signOut } from "@/lib/auth-client";
 import { AppShell } from "@/components/layout/AppShell";
 import { LeadMetricCards } from "@/components/features/leads/LeadMetricCards";
 import { RecentActivityFeed } from "@/components/features/leads/RecentActivityFeed";
@@ -30,6 +32,22 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const { data: session, isPending: isSessionPending } = useSession();
+
+  // Strict Admin Gate: If not authenticated or role is not admin, immediately reject access
+  useEffect(() => {
+    if (!isSessionPending) {
+      if (!session?.user) {
+        router.push("/login");
+      } else if ((session.user as any)?.role !== "admin") {
+        signOut().finally(() => {
+          router.push("/login?error=pending");
+        });
+      }
+    }
+  }, [session, isSessionPending, router]);
+
   const [activeTab, setActiveTab] = useState<string>("overview");
   const [leads, setLeads] = useState<Lead[]>(mockLeads);
   const [groups, setGroups] = useState<SearchGroup[]>(mockSearchGroups);
