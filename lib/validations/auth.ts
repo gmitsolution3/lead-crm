@@ -27,7 +27,11 @@ export const registerSchema = z
       .string()
       .optional()
       .refine(
-        (val) => !val || /^(\+?\d{1,4}[-.\s]?)?\(?\d{1,4}\)?[-.\s]?\d{1,9}[-.\s]?\d{1,9}$/.test(val),
+        (val) =>
+          !val ||
+          /^(\+?\d{1,4}[-.\s]?)?\(?\d{1,4}\)?[-.\s]?\d{1,9}[-.\s]?\d{1,9}$/.test(
+            val
+          ),
         { message: "Please enter a valid phone number" }
       ),
     password: z
@@ -36,11 +40,8 @@ export const registerSchema = z
     confirmPassword: z
       .string()
       .min(1, { message: "Please confirm your password" }),
-    role: z.enum(["user", "admin"], {
-      message: "Please select a valid role",
-    }),
     terms: z.boolean().refine((val) => val === true, {
-      message: "You must accept the terms of service and privacy policy",
+      message: "You must accept the terms of service and administrator agreement",
     }),
   })
   .refine((data) => data.password === data.confirmPassword, {

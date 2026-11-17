@@ -8,6 +8,7 @@ import { LeadTable } from "@/components/features/leads/LeadTable";
 import { LeadDetailSheet } from "@/components/features/leads/LeadDetailSheet";
 import { LeadFormModal } from "@/components/features/leads/LeadFormModal";
 import { SearchGroupGrid } from "@/components/features/search-groups/SearchGroupGrid";
+import { TeamManagement } from "@/components/features/admin/TeamManagement";
 import {
   mockLeads,
   mockSearchGroups,
@@ -521,6 +522,11 @@ export default function DashboardPage() {
               ))}
             </div>
           </div>
+        )}
+
+        {/* VIEW 5: TEAM & ACCESS MANAGEMENT */}
+        {activeTab === "team" && (
+          <TeamManagement />
         )}
       </div>
 

@@ -189,10 +189,10 @@ export function Header({
         {session?.user && (
           <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-stone-200">
             <Badge
-              variant={userRole === "admin" ? "terracotta" : "sage"}
+              variant="terracotta"
               className="text-[10px] uppercase font-bold"
             >
-              {userRole.toUpperCase()}
+              ADMIN
             </Badge>
 
             <Button
