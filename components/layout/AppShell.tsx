@@ -17,6 +17,7 @@ interface AppShellProps {
   selectedGroupQuery?: string | null;
   onClearGroupFilter?: () => void;
   onOpenNewLeadForm?: () => void;
+  onExportLeads?: () => void;
 }
 
 export function AppShell({
@@ -31,6 +32,7 @@ export function AppShell({
   selectedGroupQuery,
   onClearGroupFilter,
   onOpenNewLeadForm,
+  onExportLeads,
 }: AppShellProps) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
@@ -43,6 +45,7 @@ export function AppShell({
         totalLeadsCount={totalLeadsCount}
         totalGroupsCount={totalGroupsCount}
         onOpenNewLeadForm={onOpenNewLeadForm}
+        onExportLeads={onExportLeads}
       />
 
       {/* Mobile Drawer */}
@@ -54,6 +57,7 @@ export function AppShell({
             totalLeadsCount={totalLeadsCount}
             totalGroupsCount={totalGroupsCount}
             onOpenNewLeadForm={onOpenNewLeadForm}
+            onExportLeads={onExportLeads}
             isMobile
             onCloseMobile={() => setMobileSidebarOpen(false)}
           />

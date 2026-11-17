@@ -7,16 +7,23 @@ import {
   RefreshCw,
   Menu,
   Plus,
+  ShieldCheck,
+  User,
+  LogOut,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { useSession, signOut } from "@/lib/auth-client";
+import { useRouter } from "next/navigation";
 
 interface HeaderProps {
   searchQuery: string;
@@ -37,6 +44,20 @@ export function Header({
   onClearGroupFilter,
   onOpenNewLeadForm,
 }: HeaderProps) {
+  const router = useRouter();
+  const { data: session } = useSession();
+  const userRole = (session?.user as any)?.role || "admin";
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      router.push("/login");
+      router.refresh();
+    } catch {
+      router.push("/login");
+    }
+  };
+
   return (
     <header className="sticky top-0 z-30 flex h-18 w-full items-center justify-between border-b border-stone-200/90 bg-paper/95 px-4 backdrop-blur-md md:px-8">
       {/* Left section: mobile hamburger + global search */}
@@ -163,6 +184,28 @@ export function Header({
             </div>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* User Role & Quick Sign Out */}
+        {session?.user && (
+          <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-stone-200">
+            <Badge
+              variant={userRole === "admin" ? "terracotta" : "sage"}
+              className="text-[10px] uppercase font-bold"
+            >
+              {userRole.toUpperCase()}
+            </Badge>
+
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={handleSignOut}
+              title="Sign Out"
+              className="h-8 w-8 text-stone-400 hover:text-terracotta-700 hover:bg-terracotta-50 rounded-lg cursor-pointer"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        )}
 
         {/* Live Status indicator */}
         <div className="hidden xl:flex items-center gap-2 rounded-xl bg-oatmeal-200/60 px-3 py-1.5 border border-stone-200/80">

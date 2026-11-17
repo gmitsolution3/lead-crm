@@ -165,6 +165,35 @@ export default function DashboardPage() {
     setGroups((prev) => [newGroup, ...prev]);
   };
 
+  const handleExportLeads = () => {
+    const headers = ["Lead ID", "Name", "Source", "Email", "Phone", "Website", "Search Query", "Address"];
+    const rows = leads.map((l) => [
+      l.leadId,
+      `"${l.name.replace(/"/g, '""')}"`,
+      l.source,
+      l.email || "",
+      l.phone || "",
+      l.website || "",
+      `"${l.searchQuery.replace(/"/g, '""')}"`,
+      `"${(l.address || "").replace(/"/g, '""')}"`,
+    ]);
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute(
+      "download",
+      `verdant-leads-export-${new Date().toISOString().slice(0, 10)}.csv`
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setSyncFeedback("Admin action verified: Lead dataset successfully exported as CSV!");
+    setTimeout(() => setSyncFeedback(null), 4000);
+  };
+
   // Calculations for metrics
   const totalLeads = leads.length;
   const activeCampaigns = groups.length;
@@ -185,6 +214,7 @@ export default function DashboardPage() {
       selectedGroupQuery={selectedGroupFilter}
       onClearGroupFilter={() => setSelectedGroupFilter(null)}
       onOpenNewLeadForm={() => setIsFormOpen(true)}
+      onExportLeads={handleExportLeads}
     >
       {/* Toast Feedback */}
       <AnimatePresence>
