@@ -55,9 +55,9 @@ export default function RegisterPage() {
     },
   });
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated as Admin
   React.useEffect(() => {
-    if (session?.user) {
+    if (session?.user && (session.user as any)?.role === "admin") {
       router.push("/");
     }
   }, [session, router]);

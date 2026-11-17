@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
@@ -14,6 +14,7 @@ import {
   PlusCircle,
   LogOut,
   ShieldCheck,
+  UserCog,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +43,7 @@ export function Sidebar({
   onExportLeads,
 }: SidebarProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const { data: session } = useSession();
 
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -55,6 +57,13 @@ export function Sidebar({
       .join("")
       .slice(0, 2)
       .toUpperCase() || "AA";
+
+  const currentActiveTab =
+    pathname === "/users"
+      ? "users"
+      : pathname === "/settings"
+      ? "settings"
+      : activeTab;
 
   const navItems = [
     {
@@ -82,16 +91,38 @@ export function Sidebar({
       badge: "6 Active",
       badgeVariant: "sage" as const,
     },
+  ];
+
+  const settingsItems = [
     {
-      id: "team",
-      label: "Team & Access",
-      icon: ShieldCheck,
+      id: "users",
+      label: "Users",
+      icon: UserCog,
+      badge: null,
+    },
+    {
+      id: "settings",
+      label: "Settings",
+      icon: Settings,
       badge: null,
     },
   ];
 
   const handleSelect = (id: string) => {
-    onTabChange(id);
+    if (id === "users") {
+      if (pathname !== "/users") {
+        router.push("/users");
+      }
+    } else if (id === "settings") {
+      if (pathname !== "/settings") {
+        router.push("/settings");
+      }
+    } else {
+      if (pathname !== "/") {
+        router.push("/");
+      }
+      onTabChange(id);
+    }
     if (isMobile && onCloseMobile) {
       onCloseMobile();
     }
@@ -191,7 +222,7 @@ export function Sidebar({
           <nav className="space-y-1">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = activeTab === item.id;
+              const isActive = currentActiveTab === item.id;
               return (
                 <button
                   key={item.id}
@@ -264,6 +295,41 @@ export function Sidebar({
               </div>
               <span className="text-xs text-stone-400">CSV/JSON</span>
             </button>
+          </div>
+
+          {/* Settings Group */}
+          <div className="mt-6 px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
+            Settings
+          </div>
+          <div className="space-y-1">
+            {settingsItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = currentActiveTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => handleSelect(item.id)}
+                  className={cn(
+                    "group flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer",
+                    isActive
+                      ? "bg-botanical-700 text-paper shadow-sm"
+                      : "text-stone-700 hover:bg-oatmeal-200/70 hover:text-botanical-900"
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon
+                      className={cn(
+                        "h-4.5 w-4.5 transition-colors",
+                        isActive
+                          ? "text-sage-200"
+                          : "text-stone-400 group-hover:text-botanical-700"
+                      )}
+                    />
+                    <span>{item.label}</span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
