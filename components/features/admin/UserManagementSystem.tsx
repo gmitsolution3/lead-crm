@@ -47,6 +47,7 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -626,24 +627,26 @@ export function UserManagementSystem() {
                             </DropdownMenuTrigger>
 
                             <DropdownMenuContent align="end" className="w-48 p-1.5 bg-[#FCFBF8] border-stone-200">
-                              <DropdownMenuLabel className="text-[10px] uppercase font-bold text-stone-400 px-2 py-1">
-                                User Actions
-                              </DropdownMenuLabel>
+                              <DropdownMenuGroup>
+                                <DropdownMenuLabel className="text-[10px] uppercase font-bold text-stone-400 px-2 py-1">
+                                  User Actions
+                                </DropdownMenuLabel>
 
-                              {/* View Details */}
-                              <DropdownMenuItem
-                                onClick={() => setDetailModalUser(user)}
-                                className="text-xs font-medium cursor-pointer gap-2"
-                              >
-                                <Info className="h-3.5 w-3.5 text-stone-500" />
-                                <span>View Details</span>
-                              </DropdownMenuItem>
+                                {/* View Details */}
+                                <DropdownMenuItem
+                                  onClick={() => setDetailModalUser(user)}
+                                  className="text-xs font-medium cursor-pointer gap-2"
+                                >
+                                  <Info className="h-3.5 w-3.5 text-stone-500" />
+                                  <span>View Details</span>
+                                </DropdownMenuItem>
+                              </DropdownMenuGroup>
 
                               <DropdownMenuSeparator className="my-1 bg-stone-200/80" />
 
                               {/* Role Changes */}
                               {!isCurrentUser && !isBanned && (
-                                <>
+                                <DropdownMenuGroup>
                                   {isAdmin ? (
                                     <DropdownMenuItem
                                       onClick={() => handleUpdateRole(user.id, "user")}
@@ -661,12 +664,12 @@ export function UserManagementSystem() {
                                       <span>Promote to Admin</span>
                                     </DropdownMenuItem>
                                   )}
-                                </>
+                                </DropdownMenuGroup>
                               )}
 
                               {/* Ban / Unban */}
                               {!isCurrentUser && (
-                                <>
+                                <DropdownMenuGroup>
                                   {isBanned ? (
                                     <DropdownMenuItem
                                       onClick={() => handleUnbanUser(user.id, user.name)}
@@ -684,12 +687,12 @@ export function UserManagementSystem() {
                                       <span>Ban User...</span>
                                     </DropdownMenuItem>
                                   )}
-                                </>
+                                </DropdownMenuGroup>
                               )}
 
                               {/* Delete User */}
                               {!isCurrentUser && (
-                                <>
+                                <DropdownMenuGroup>
                                   <DropdownMenuSeparator className="my-1 bg-stone-200/80" />
                                   <DropdownMenuItem
                                     onClick={() => setDeleteModalUser(user)}
@@ -698,7 +701,7 @@ export function UserManagementSystem() {
                                     <Trash2 className="h-3.5 w-3.5 text-red-600" />
                                     <span>Delete Permanently...</span>
                                   </DropdownMenuItem>
-                                </>
+                                </DropdownMenuGroup>
                               )}
                             </DropdownMenuContent>
                           </DropdownMenu>
