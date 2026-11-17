@@ -10,6 +10,15 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import {
   Building2,
@@ -182,9 +191,9 @@ export function LeadFormModal({
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-stone-700">
+              <Label className="text-xs font-medium text-stone-700">
                 Business / Lead Name <span className="text-terracotta-600">*</span>
-              </label>
+              </Label>
               <Input
                 name="name"
                 value={formData.name}
@@ -203,23 +212,28 @@ export function LeadFormModal({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-stone-700">Extraction Source</label>
-                <select
-                  name="source"
+                <Label className="text-xs font-medium text-stone-700">Extraction Source</Label>
+                <Select
                   value={formData.source}
-                  onChange={handleChange}
-                  className="w-full h-10 rounded-xl border border-stone-300 bg-paper px-3 py-2 text-xs text-stone-800 focus:outline-none focus:ring-2 focus:ring-botanical-600"
+                  onValueChange={(val) =>
+                    setFormData((prev) => ({ ...prev, source: val ?? "" }))
+                  }
                 >
-                  {sources.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full h-10 text-xs bg-paper border-stone-300">
+                    <SelectValue placeholder="Select Source" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sources.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-stone-700">Campaign Query Group</label>
+                <Label className="text-xs font-medium text-stone-700">Campaign Query Group</Label>
                 <div className="relative">
                   <Input
                     name="searchQuery"
@@ -242,9 +256,9 @@ export function LeadFormModal({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-stone-700 flex items-center gap-1.5">
+                <Label className="text-xs font-medium text-stone-700 flex items-center gap-1.5">
                   <Phone className="h-3 w-3 text-stone-400" /> Phone Number
-                </label>
+                </Label>
                 <Input
                   name="phone"
                   value={formData.phone}
@@ -255,9 +269,9 @@ export function LeadFormModal({
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-stone-700 flex items-center gap-1.5">
+                <Label className="text-xs font-medium text-stone-700 flex items-center gap-1.5">
                   <Mail className="h-3 w-3 text-stone-400" /> Email Address
-                </label>
+                </Label>
                 <Input
                   name="email"
                   value={formData.email}
@@ -276,9 +290,9 @@ export function LeadFormModal({
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-stone-700 flex items-center gap-1.5">
+              <Label className="text-xs font-medium text-stone-700 flex items-center gap-1.5">
                 <Globe className="h-3 w-3 text-stone-400" /> Official Website
-              </label>
+              </Label>
               <Input
                 name="website"
                 value={formData.website}
@@ -289,9 +303,9 @@ export function LeadFormModal({
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-stone-700 flex items-center gap-1.5">
+              <Label className="text-xs font-medium text-stone-700 flex items-center gap-1.5">
                 <MapPin className="h-3 w-3 text-stone-400" /> Physical Address
-              </label>
+              </Label>
               <Input
                 name="address"
                 value={formData.address}
@@ -311,9 +325,9 @@ export function LeadFormModal({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-stone-700 flex items-center gap-1.5">
+                <Label className="text-xs font-medium text-stone-700 flex items-center gap-1.5">
                   <WhatsAppIcon className="h-3.5 w-3.5 text-emerald-600" /> WhatsApp Number
-                </label>
+                </Label>
                 <Input
                   name="whatsapp"
                   value={formData.whatsapp}
@@ -324,9 +338,9 @@ export function LeadFormModal({
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-stone-700 flex items-center gap-1.5">
+                <Label className="text-xs font-medium text-stone-700 flex items-center gap-1.5">
                   <InstagramIcon className="h-3.5 w-3.5 text-terracotta-600" /> Instagram URL / Handle
-                </label>
+                </Label>
                 <Input
                   name="instagram"
                   value={formData.instagram}
@@ -337,9 +351,9 @@ export function LeadFormModal({
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-stone-700 flex items-center gap-1.5">
+                <Label className="text-xs font-medium text-stone-700 flex items-center gap-1.5">
                   <LinkedinIcon className="h-3.5 w-3.5 text-botanical-700" /> LinkedIn Profile
-                </label>
+                </Label>
                 <Input
                   name="linkedin"
                   value={formData.linkedin}
@@ -350,9 +364,9 @@ export function LeadFormModal({
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-stone-700 flex items-center gap-1.5">
+                <Label className="text-xs font-medium text-stone-700 flex items-center gap-1.5">
                   <FacebookIcon className="h-3.5 w-3.5 text-stone-600" /> Facebook Page
-                </label>
+                </Label>
                 <Input
                   name="facebook"
                   value={formData.facebook}
@@ -370,13 +384,13 @@ export function LeadFormModal({
               <FileText className="h-3.5 w-3.5 text-botanical-600" />
               <span>Field Remarks & Prospect Notes</span>
             </div>
-            <textarea
+            <Textarea
               name="remark"
               value={formData.remark}
               onChange={handleChange}
               rows={3}
               placeholder="e.g. Connected with store manager Elena. Requested organic wholesale coffee pricing sheet..."
-              className="w-full rounded-xl border border-stone-300 bg-paper p-3 text-xs text-stone-800 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-botanical-600 transition-all"
+              className="w-full bg-paper border-stone-300 text-xs"
             />
           </div>
 

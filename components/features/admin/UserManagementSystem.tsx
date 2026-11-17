@@ -27,7 +27,15 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -52,6 +60,8 @@ export interface ManagedUser {
   email: string;
   role: string;
   phone?: string;
+  image?: string | null;
+  imagePublicId?: string | null;
   banned: boolean;
   banReason?: string | null;
   banExpires?: string | null;
@@ -398,27 +408,39 @@ export function UserManagementSystem() {
             </div>
 
             {/* Role Filter */}
-            <select
-              value={roleFilter}
-              onChange={(e: any) => setRoleFilter(e.target.value)}
-              className="h-9.5 px-3 rounded-xl border border-stone-200 bg-paper text-xs text-stone-700 font-medium focus:outline-none focus:ring-2 focus:ring-botanical-600/15 cursor-pointer"
-            >
-              <option value="all">All Roles</option>
-              <option value="admin">Administrator Only</option>
-              <option value="user">User (Pending) Only</option>
-            </select>
+            <div className="w-full sm:w-44">
+              <Select
+                value={roleFilter}
+                onValueChange={(val: any) => setRoleFilter(val ?? "all")}
+              >
+                <SelectTrigger size="sm" className="h-9.5 text-xs bg-paper border-stone-200">
+                  <SelectValue placeholder="All Roles" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Roles</SelectItem>
+                  <SelectItem value="admin">Administrator Only</SelectItem>
+                  <SelectItem value="user">User (Pending) Only</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
             {/* Status Filter */}
-            <select
-              value={statusFilter}
-              onChange={(e: any) => setStatusFilter(e.target.value)}
-              className="h-9.5 px-3 rounded-xl border border-stone-200 bg-paper text-xs text-stone-700 font-medium focus:outline-none focus:ring-2 focus:ring-botanical-600/15 cursor-pointer"
-            >
-              <option value="all">All Statuses</option>
-              <option value="active">Active (Admin)</option>
-              <option value="pending">Pending Approval</option>
-              <option value="banned">Banned</option>
-            </select>
+            <div className="w-full sm:w-44">
+              <Select
+                value={statusFilter}
+                onValueChange={(val: any) => setStatusFilter(val ?? "all")}
+              >
+                <SelectTrigger size="sm" className="h-9.5 text-xs bg-paper border-stone-200">
+                  <SelectValue placeholder="All Statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="active">Active (Admin)</SelectItem>
+                  <SelectItem value="pending">Pending Approval</SelectItem>
+                  <SelectItem value="banned">Banned</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <span className="text-xs text-stone-500 font-medium shrink-0">
@@ -473,17 +495,25 @@ export function UserManagementSystem() {
                       {/* Identity */}
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <div
-                            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl font-bold text-xs shadow-xs ${
-                              isBanned
-                                ? "bg-red-100 text-red-700 border border-red-200"
-                                : isAdmin
-                                ? "bg-botanical-700 text-paper"
-                                : "bg-sage-200 text-botanical-900"
-                            }`}
-                          >
-                            {user.name.charAt(0).toUpperCase()}
-                          </div>
+                          {user.image ? (
+                            <img
+                              src={user.image}
+                              alt={user.name}
+                              className="h-9 w-9 shrink-0 rounded-xl object-cover shadow-xs border border-stone-200"
+                            />
+                          ) : (
+                            <div
+                              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl font-bold text-xs shadow-xs ${
+                                isBanned
+                                  ? "bg-red-100 text-red-700 border border-red-200"
+                                  : isAdmin
+                                  ? "bg-botanical-700 text-paper"
+                                  : "bg-sage-200 text-botanical-900"
+                              }`}
+                            >
+                              {user.name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5">
                               <span className="text-xs font-semibold text-botanical-900 truncate">
@@ -715,7 +745,7 @@ export function UserManagementSystem() {
 
             {/* Presets */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-stone-700">Ban Reason Presets</label>
+              <Label className="text-xs font-semibold text-stone-700">Ban Reason Presets</Label>
               <div className="flex flex-wrap gap-1.5">
                 {[
                   "Policy violation",
@@ -737,7 +767,7 @@ export function UserManagementSystem() {
 
             {/* Reason input */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-stone-700">Custom Reason</label>
+              <Label className="text-xs font-semibold text-stone-700">Custom Reason</Label>
               <Input
                 value={banReason}
                 onChange={(e) => setBanReason(e.target.value)}
@@ -748,23 +778,23 @@ export function UserManagementSystem() {
 
             {/* Duration */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-stone-700">Ban Duration</label>
-              <select
-                value={banDays}
-                onChange={(e) =>
-                  setBanDays(
-                    e.target.value === "permanent"
-                      ? "permanent"
-                      : Number(e.target.value)
-                  )
+              <Label className="text-xs font-semibold text-stone-700">Ban Duration</Label>
+              <Select
+                value={String(banDays)}
+                onValueChange={(val: any) =>
+                  setBanDays(val === "permanent" ? "permanent" : Number(val))
                 }
-                className="w-full h-10 px-3 rounded-xl border border-stone-200 bg-paper text-xs text-stone-700 font-medium focus:outline-none cursor-pointer"
               >
-                <option value="permanent">Permanent (Indefinite)</option>
-                <option value={7}>7 Days</option>
-                <option value={30}>30 Days</option>
-                <option value={90}>90 Days</option>
-              </select>
+                <SelectTrigger className="w-full h-10 text-xs bg-paper border-stone-200">
+                  <SelectValue placeholder="Select duration" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="permanent">Permanent (Indefinite)</SelectItem>
+                  <SelectItem value="7">7 Days</SelectItem>
+                  <SelectItem value="30">30 Days</SelectItem>
+                  <SelectItem value="90">90 Days</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex items-center gap-2 pt-2">

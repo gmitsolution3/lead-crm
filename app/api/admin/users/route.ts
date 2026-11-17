@@ -52,6 +52,8 @@ export async function GET() {
         banned: 1,
         banReason: 1,
         banExpires: 1,
+        image: 1,
+        imagePublicId: 1,
         createdAt: 1,
         updatedAt: 1,
       })
@@ -64,6 +66,8 @@ export async function GET() {
       email: u.email,
       role: u.role || "user",
       phone: u.phone || "",
+      image: u.image || null,
+      imagePublicId: u.imagePublicId || null,
       banned: Boolean(u.banned),
       banReason: u.banReason || null,
       banExpires: u.banExpires || null,

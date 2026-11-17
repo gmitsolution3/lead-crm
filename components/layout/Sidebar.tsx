@@ -366,9 +366,17 @@ export function Sidebar({
           onClick={() => setProfileMenuOpen(!profileMenuOpen)}
           className="flex items-center gap-3 rounded-xl bg-oatmeal-100/90 p-2.5 transition-colors cursor-pointer hover:bg-oatmeal-200/90"
         >
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-botanical-700 text-paper font-bold text-sm shadow-xs">
-            {initials}
-          </div>
+          {session?.user?.image ? (
+            <img
+              src={session.user.image}
+              alt={userName}
+              className="h-9 w-9 rounded-lg object-cover shadow-xs border border-stone-200/80"
+            />
+          ) : (
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-botanical-700 text-paper font-bold text-sm shadow-xs">
+              {initials}
+            </div>
+          )}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5">
               <p className="truncate text-xs font-semibold text-botanical-900">

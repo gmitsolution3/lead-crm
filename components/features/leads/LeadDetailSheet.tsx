@@ -7,6 +7,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { Lead } from "@/types";
 import { formatDate } from "@/lib/utils";
 import {
@@ -402,11 +403,11 @@ export function LeadDetailSheet({
                 <FileText className="h-4 w-4 opacity-50" />
               </div>
               {isEditingRemark ? (
-                <textarea
+                <Textarea
                   value={remarkText}
                   onChange={(e) => setRemarkText(e.target.value)}
                   rows={3}
-                  className="w-full rounded-xl border border-stone-300 bg-paper p-2.5 text-xs text-stone-800 focus:outline-none focus:ring-2 focus:ring-botanical-600"
+                  className="w-full bg-paper border-stone-300 text-xs text-stone-800"
                 />
               ) : (
                 <p className="text-xs leading-relaxed text-stone-700 italic">

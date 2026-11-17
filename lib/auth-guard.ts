@@ -62,6 +62,8 @@ export async function requireAuth(options: GuardOptions = {}) {
       ...session.user,
       role: userRole,
       phone: dbUser.phone || "",
+      image: dbUser.image || session.user.image || null,
+      imagePublicId: dbUser.imagePublicId || null,
     },
   };
 }

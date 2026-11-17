@@ -3,6 +3,8 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { signIn, useSession } from "@/lib/auth-client";
 import { LoginFormData, loginSchema } from "@/lib/validations/auth";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -38,6 +40,8 @@ export default function LoginPage() {
   const {
     register,
     handleSubmit,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -196,9 +200,9 @@ export default function LoginPage() {
           >
             {/* Email */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-stone-700">
+              <Label className="text-xs font-semibold text-stone-700">
                 Admin Email Address
-              </label>
+              </Label>
               <div className="relative">
                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
                 <Input
@@ -223,9 +227,9 @@ export default function LoginPage() {
             {/* Password */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-stone-700">
+                <Label className="text-xs font-semibold text-stone-700">
                   Password
-                </label>
+                </Label>
                 <span className="text-[11px] text-stone-400 hover:text-stone-600 cursor-not-allowed">
                   Forgot password?
                 </span>
@@ -263,15 +267,15 @@ export default function LoginPage() {
             </div>
 
             {/* Remember Me */}
-            <div className="flex items-center justify-between pt-1">
-              <label className="flex items-center gap-2 text-xs text-stone-600 cursor-pointer select-none">
-                <input
-                  {...register("rememberMe")}
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-stone-300 text-botanical-700 focus:ring-botanical-600 accent-botanical-700"
-                />
-                <span>Keep admin session active</span>
-              </label>
+            <div className="flex items-center gap-2 pt-1">
+              <Checkbox
+                id="rememberMe"
+                checked={!!watch("rememberMe")}
+                onCheckedChange={(val) => setValue("rememberMe", !!val)}
+              />
+              <Label htmlFor="rememberMe" className="text-xs text-stone-600 cursor-pointer font-normal">
+                Keep admin session active
+              </Label>
             </div>
 
             {/* Submit Button */}

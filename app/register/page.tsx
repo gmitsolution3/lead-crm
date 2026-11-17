@@ -26,6 +26,8 @@ import { registerSchema, RegisterFormData } from "@/lib/validations/auth";
 import { signUp, signIn, useSession } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 
 export default function RegisterPage() {
@@ -42,6 +44,8 @@ export default function RegisterPage() {
   const {
     register,
     handleSubmit,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
@@ -258,9 +262,9 @@ export default function RegisterPage() {
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 {/* Full Name */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-stone-700">
+                  <Label className="text-xs font-semibold text-stone-700">
                     Full Name
-                  </label>
+                  </Label>
                   <div className="relative">
                     <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
                     <Input
@@ -284,9 +288,9 @@ export default function RegisterPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   {/* Email */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-stone-700">
+                    <Label className="text-xs font-semibold text-stone-700">
                       Work Email Address
-                    </label>
+                    </Label>
                     <div className="relative">
                       <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
                       <Input
@@ -308,9 +312,9 @@ export default function RegisterPage() {
 
                   {/* Phone */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-stone-700">
+                    <Label className="text-xs font-semibold text-stone-700">
                       Phone (Optional)
-                    </label>
+                    </Label>
                     <div className="relative">
                       <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
                       <Input
@@ -333,9 +337,9 @@ export default function RegisterPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   {/* Password */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-stone-700">
+                    <Label className="text-xs font-semibold text-stone-700">
                       Password
-                    </label>
+                    </Label>
                     <div className="relative">
                       <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
                       <Input
@@ -364,9 +368,9 @@ export default function RegisterPage() {
 
                   {/* Confirm Password */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-stone-700">
+                    <Label className="text-xs font-semibold text-stone-700">
                       Confirm Password
-                    </label>
+                    </Label>
                     <div className="relative">
                       <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
                       <Input
@@ -401,21 +405,22 @@ export default function RegisterPage() {
                 </div>
 
                 {/* Terms Checkbox */}
-                <div className="pt-1">
-                  <label className="flex items-start gap-2.5 text-xs text-stone-600 cursor-pointer select-none">
-                    <input
-                      {...register("terms")}
-                      type="checkbox"
-                      className="mt-0.5 h-4 w-4 rounded border-stone-300 text-botanical-700 focus:ring-botanical-600 accent-botanical-700"
+                <div className="pt-1 space-y-1">
+                  <div className="flex items-start gap-2.5">
+                    <Checkbox
+                      id="terms"
+                      className="mt-0.5"
+                      checked={!!watch("terms")}
+                      onCheckedChange={(val) => setValue("terms", !!val)}
                     />
-                    <span className="leading-relaxed">
+                    <Label htmlFor="terms" className="text-xs text-stone-600 cursor-pointer font-normal leading-relaxed">
                       I agree to the{" "}
                       <span className="text-botanical-800 font-medium underline underline-offset-2">
                         Terms of Service
                       </span>{" "}
                       and acknowledge administrator approval flow.
-                    </span>
-                  </label>
+                    </Label>
+                  </div>
                   {errors.terms && (
                     <p className="text-[11px] text-terracotta-600 font-medium mt-1">
                       {errors.terms.message}
