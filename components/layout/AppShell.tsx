@@ -16,7 +16,6 @@ interface AppShellProps {
   onRefreshData?: () => void;
   selectedGroupQuery?: string | null;
   onClearGroupFilter?: () => void;
-  onOpenNewLeadForm?: () => void;
   onExportLeads?: () => void;
 }
 
@@ -31,7 +30,6 @@ export function AppShell({
   onRefreshData,
   selectedGroupQuery,
   onClearGroupFilter,
-  onOpenNewLeadForm,
   onExportLeads,
 }: AppShellProps) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -44,7 +42,6 @@ export function AppShell({
         onTabChange={onTabChange}
         totalLeadsCount={totalLeadsCount}
         totalGroupsCount={totalGroupsCount}
-        onOpenNewLeadForm={onOpenNewLeadForm}
         onExportLeads={onExportLeads}
       />
 
@@ -56,7 +53,6 @@ export function AppShell({
             onTabChange={onTabChange}
             totalLeadsCount={totalLeadsCount}
             totalGroupsCount={totalGroupsCount}
-            onOpenNewLeadForm={onOpenNewLeadForm}
             onExportLeads={onExportLeads}
             isMobile
             onCloseMobile={() => setMobileSidebarOpen(false)}
@@ -73,7 +69,6 @@ export function AppShell({
           onRefreshData={onRefreshData}
           selectedGroupQuery={selectedGroupQuery}
           onClearGroupFilter={onClearGroupFilter}
-          onOpenNewLeadForm={onOpenNewLeadForm}
         />
         <main className="flex-1 px-4 py-6 sm:px-6 md:px-8 md:py-8">
           <div className="mx-auto max-w-7xl">{children}</div>

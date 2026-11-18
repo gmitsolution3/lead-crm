@@ -5,11 +5,8 @@ import { useRouter, usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
-  FolderKanban,
-  Sparkles,
   Download,
   Settings,
-  Compass,
   Sprout,
   PlusCircle,
   LogOut,
@@ -26,7 +23,6 @@ interface SidebarProps {
   onTabChange: (tab: string) => void;
   totalLeadsCount: number;
   totalGroupsCount: number;
-  onOpenNewLeadForm?: () => void;
   isMobile?: boolean;
   onCloseMobile?: () => void;
   onExportLeads?: () => void;
@@ -37,7 +33,6 @@ export function Sidebar({
   onTabChange,
   totalLeadsCount,
   totalGroupsCount,
-  onOpenNewLeadForm,
   isMobile,
   onCloseMobile,
   onExportLeads,
@@ -63,9 +58,19 @@ export function Sidebar({
       ? "users"
       : pathname === "/settings"
       ? "settings"
+      : pathname?.startsWith("/leads")
+      ? "leads"
+      : pathname === "/"
+      ? "overview"
       : activeTab;
 
-  const navItems = [
+  const navItems: {
+    id: string;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    badge: string | null;
+    badgeVariant?: "sage" | "default";
+  }[] = [
     {
       id: "overview",
       label: "Overview",
@@ -77,19 +82,6 @@ export function Sidebar({
       label: "Leads Table",
       icon: Users,
       badge: totalLeadsCount.toString(),
-    },
-    {
-      id: "groups",
-      label: "Search Groups",
-      icon: FolderKanban,
-      badge: totalGroupsCount.toString(),
-    },
-    {
-      id: "campaigns",
-      label: "Active Campaigns",
-      icon: Compass,
-      badge: "6 Active",
-      badgeVariant: "sage" as const,
     },
   ];
 
@@ -117,19 +109,18 @@ export function Sidebar({
       if (pathname !== "/settings") {
         router.push("/settings");
       }
-    } else {
+    } else if (id === "leads") {
+      if (pathname !== "/leads") {
+        router.push("/leads");
+      }
+    } else if (id === "overview") {
       if (pathname !== "/") {
         router.push("/");
       }
+    }
+    if (onTabChange) {
       onTabChange(id);
     }
-    if (isMobile && onCloseMobile) {
-      onCloseMobile();
-    }
-  };
-
-  const handleOpenForm = () => {
-    onOpenNewLeadForm?.();
     if (isMobile && onCloseMobile) {
       onCloseMobile();
     }
@@ -182,19 +173,8 @@ export function Sidebar({
           </div>
         </div>
 
-        {/* Quick Action: New Lead Button */}
-        <div className="px-4 pt-4">
-          <Button
-            onClick={handleOpenForm}
-            className="w-full bg-botanical-700 hover:bg-botanical-800 text-paper rounded-xl gap-2 text-xs h-9.5 shadow-sm font-medium cursor-pointer"
-          >
-            <PlusCircle className="h-4 w-4 text-sage-300" />
-            <span>Add New Lead</span>
-          </Button>
-        </div>
-
         {/* Extension Live Connection Pill */}
-        <div className="mx-4 mt-3 rounded-xl border border-sage-200/90 bg-sage-50/70 p-3 shrink-0">
+        <div className="mx-4 mt-4 rounded-xl border border-sage-200/90 bg-sage-50/70 p-3 shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="relative flex h-2.5 w-2.5">
@@ -269,22 +249,6 @@ export function Sidebar({
             Admin Tools
           </div>
           <div className="space-y-1">
-            <button
-              onClick={() => handleSelect("enrichment")}
-              className={cn(
-                "group flex w-full items-center justify-between rounded-xl px-3.5 py-2 text-sm font-medium text-stone-700 transition-all hover:bg-oatmeal-200/70 hover:text-botanical-900 cursor-pointer",
-                activeTab === "enrichment" && "bg-botanical-700 text-paper"
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <Sparkles className="h-4.5 w-4.5 text-terracotta-500" />
-                <span>AI Enrichment</span>
-              </div>
-              <span className="rounded-full bg-terracotta-100 px-1.5 py-0.2 text-[10px] font-semibold text-terracotta-700">
-                Beta
-              </span>
-            </button>
-
             <button
               onClick={handleExportClick}
               className="group flex w-full items-center justify-between rounded-xl px-3.5 py-2 text-sm font-medium text-stone-700 transition-all hover:bg-oatmeal-200/70 hover:text-botanical-900 cursor-pointer"

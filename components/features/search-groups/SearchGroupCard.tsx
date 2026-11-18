@@ -24,7 +24,10 @@ export function SearchGroupCard({
   onFilterByGroup,
 }: SearchGroupCardProps) {
   return (
-    <Card className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-stone-200/90 bg-[#FCFBF8] p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1 hover:shadow-paper-lg hover:border-sage-300">
+    <Card
+      onClick={() => onFilterByGroup(group.groupId || group.query)}
+      className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-stone-200/90 bg-[#FCFBF8] p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1 hover:shadow-paper-lg hover:border-sage-300 cursor-pointer"
+    >
       {/* Top background accent bar */}
       <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-botanical-700 via-sage-400 to-terracotta-500 opacity-80" />
 
@@ -76,7 +79,10 @@ export function SearchGroupCard({
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => onFilterByGroup(group.query)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onFilterByGroup(group.groupId || group.query);
+          }}
           className="text-xs font-semibold text-botanical-800 hover:text-botanical-900 hover:bg-sage-100/70 gap-1.5 rounded-xl h-8 px-3 cursor-pointer"
         >
           <span>View Leads</span>

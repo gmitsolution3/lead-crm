@@ -2,18 +2,18 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Users, Compass, Percent, TrendingUp } from "lucide-react";
+import { Users, FolderKanban, Percent, TrendingUp } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
 interface LeadMetricCardsProps {
   totalLeads: number;
-  activeCampaigns: number;
+  totalGroups: number;
   conversionRate: number;
 }
 
 export function LeadMetricCards({
   totalLeads,
-  activeCampaigns,
+  totalGroups,
   conversionRate,
 }: LeadMetricCardsProps) {
   const metrics = [
@@ -30,16 +30,16 @@ export function LeadMetricCards({
       description: "Aggregated across Google Maps, LinkedIn & Instagram scrapers",
     },
     {
-      title: "Active Campaigns",
-      value: activeCampaigns.toString(),
-      subtitle: "6 query groups crawling",
+      title: "Search Groups",
+      value: totalGroups.toString(),
+      subtitle: `${totalGroups} search sessions`,
       trend: "+2 new",
       trendPositive: true,
-      icon: Compass,
+      icon: FolderKanban,
       accentColor: "text-terracotta-600",
       bgAccent: "bg-terracotta-100",
       borderAccent: "border-b-4 border-b-terracotta-500",
-      description: "Targeting Brooklyn cafes, Austin architects, UK skincare",
+      description: "Aggregated query sessions from Google Maps & social platforms",
     },
     {
       title: "Conversion / Qualification Rate",

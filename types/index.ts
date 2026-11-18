@@ -3,6 +3,7 @@ export interface SearchGroup {
   query: string;
   createdAt: string;
   updatedAt: string;
+  leads?: Lead[];
 }
 
 export interface Lead {

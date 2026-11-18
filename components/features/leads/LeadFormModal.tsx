@@ -233,7 +233,7 @@ export function LeadFormModal({
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-stone-700">Campaign Query Group</Label>
+                <Label className="text-xs font-medium text-stone-700">Search Query Group</Label>
                 <div className="relative">
                   <Input
                     name="searchQuery"

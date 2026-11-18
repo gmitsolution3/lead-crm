@@ -1,10 +1,10 @@
 import { requireAdminAuth } from "@/lib/auth-guard";
-import MainDashboard from "@/components/pages/MainDashboard";
+import OverviewDashboard from "@/components/pages/OverviewDashboard";
 
 export const instant = false;
 
 export default async function DashboardPage() {
   const session = await requireAdminAuth();
 
-  return <MainDashboard user={session.user} />;
+  return <OverviewDashboard user={session.user} />;
 }

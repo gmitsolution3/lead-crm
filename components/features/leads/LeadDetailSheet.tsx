@@ -271,7 +271,7 @@ export function LeadDetailSheet({
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-wider text-botanical-800 mb-3 flex items-center gap-2">
               <span className="h-1.5 w-1.5 rounded-full bg-botanical-600" />
-              Enriched Social Media Channels
+              Social Media Channels
             </h4>
             <div className="grid grid-cols-2 gap-3">
               {/* WhatsApp */}

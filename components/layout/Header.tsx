@@ -29,7 +29,6 @@ interface HeaderProps {
   onRefreshData?: () => void;
   selectedGroupQuery?: string | null;
   onClearGroupFilter?: () => void;
-  onOpenNewLeadForm?: () => void;
 }
 
 export function Header({
@@ -39,7 +38,6 @@ export function Header({
   onRefreshData,
   selectedGroupQuery,
   onClearGroupFilter,
-  onOpenNewLeadForm,
 }: HeaderProps) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -99,16 +97,6 @@ export function Header({
 
       {/* Right section: actions, sync status, notifications, profile */}
       <div className="flex items-center gap-2 sm:gap-3">
-        {/* Add Lead CTA button */}
-        <Button
-          onClick={onOpenNewLeadForm}
-          size="sm"
-          className="bg-botanical-700 hover:bg-botanical-800 text-paper text-xs h-9 px-3.5 gap-1.5 rounded-xl shadow-sm cursor-pointer"
-        >
-          <Plus className="h-3.5 w-3.5 text-sage-200" />
-          <span className="hidden sm:inline">Add Lead</span>
-        </Button>
-
         {/* Sync Button */}
         <Button
           variant="outline"

@@ -29,7 +29,6 @@ import {
   Check,
   RefreshCw,
   Zap,
-  Sparkles,
   Calendar,
   Mail,
   Phone,
@@ -109,7 +108,6 @@ export default function SettingsDashboard({ user: initialUser }: SettingsDashboa
     "vdt_live_84f93c019d42eb78a1bc8942e8d3fa"
   );
   const [copiedKey, setCopiedKey] = useState(false);
-  const [autoEnrichment, setAutoEnrichment] = useState(true);
   const [dailyLimit, setDailyLimit] = useState("500");
 
   // Fetch live user profile from MongoDB via Next.js internal API
@@ -842,24 +840,13 @@ export default function SettingsDashboard({ user: initialUser }: SettingsDashboa
             <Card className="p-6 border-stone-200 bg-[#FCFBF8] shadow-sm">
               <CardHeader className="p-0 pb-4">
                 <CardTitle className="text-base font-bold text-botanical-900 flex items-center gap-2">
-                  <Sparkles className="h-4.5 w-4.5 text-terracotta-500" />
-                  <span>AI Extraction & Enrichment</span>
+                  <Shield className="h-4.5 w-4.5 text-botanical-700" />
+                  <span>Scraping Safety Limits</span>
                 </CardTitle>
-                <p className="text-xs text-stone-500">Autonomous metadata and social handle crawling</p>
+                <p className="text-xs text-stone-500">Thresholds to protect browser memory and stability</p>
               </CardHeader>
 
               <CardContent className="p-0 space-y-4">
-                <div className="flex items-center justify-between p-3 rounded-xl border border-stone-200/80 bg-oatmeal-50">
-                  <div>
-                    <h4 className="text-xs font-semibold text-botanical-900">Auto-Enrich Incoming Leads</h4>
-                    <p className="text-[11px] text-stone-500">Find Instagram, WhatsApp, and email addresses automatically upon capture.</p>
-                  </div>
-                  <Checkbox
-                    checked={autoEnrichment}
-                    onCheckedChange={(checked) => setAutoEnrichment(!!checked)}
-                  />
-                </div>
-
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold text-stone-700">Max Daily Leads Cap</Label>
                   <Input

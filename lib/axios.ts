@@ -1,9 +1,9 @@
 import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from "axios";
 
 const baseUrl =
-  process.env.NODE_ENV === "development"
+  (process.env.NODE_ENV === "development"
     ? process.env.NEXT_PUBLIC_DEV_API_BASE_URL
-    : process.env.NEXT_PUBLIC_API_BASE_URL;
+    : process.env.NEXT_PUBLIC_API_BASE_URL) || "http://localhost:9000/api/v1";
 
 /**
  * Pre-configured Axios instance for Verdant Leads API calls.

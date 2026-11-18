@@ -6,20 +6,18 @@ import { SearchGroup, Lead } from "@/types";
 import { SearchGroupCard } from "./SearchGroupCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Plus } from "lucide-react";
+import { Search } from "lucide-react";
 
 interface SearchGroupGridProps {
   groups: SearchGroup[];
   leads: Lead[];
   onSelectGroupQuery: (query: string) => void;
-  onNewGroup?: () => void;
 }
 
 export function SearchGroupGrid({
   groups,
   leads,
   onSelectGroupQuery,
-  onNewGroup,
 }: SearchGroupGridProps) {
   const [filterText, setFilterText] = useState("");
 
@@ -64,7 +62,7 @@ export function SearchGroupGrid({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-stone-200/90 bg-[#FCFBF8] p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         <div>
           <h2 className="text-xl font-bold text-botanical-900">
-            Campaign Search Groups
+            Search Groups
           </h2>
           <p className="text-xs text-stone-500 mt-0.5">
             Organized lead extraction queries executed from the browser extension
@@ -77,19 +75,10 @@ export function SearchGroupGrid({
             <Input
               value={filterText}
               onChange={(e) => setFilterText(e.target.value)}
-              placeholder="Search campaign groups..."
+              placeholder="Search groups..."
               className="h-9 pl-8 text-xs bg-oatmeal-100/60 border-stone-200"
             />
           </div>
-
-          <Button
-            onClick={onNewGroup}
-            size="sm"
-            className="h-9 gap-1.5 text-xs bg-botanical-700 hover:bg-botanical-800 text-paper shrink-0 rounded-xl cursor-pointer"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            <span>New Group</span>
-          </Button>
         </div>
       </div>
 
