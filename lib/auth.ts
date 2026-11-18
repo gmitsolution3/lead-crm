@@ -5,6 +5,7 @@ import { nextCookies } from "better-auth/next-js";
 import { APIError } from "better-auth/api";
 import { ObjectId } from "mongodb";
 import { client, db } from "./mongodb";
+import { sendPasswordResetEmail } from "./email";
 
 export const auth = betterAuth({
   database: mongodbAdapter(db, {
@@ -32,6 +33,16 @@ export const auth = betterAuth({
     enabled: true,
     autoSignIn: false, // Do not auto-sign in so pending users do not bypass approval
     minPasswordLength: 6,
+    sendResetPassword: async ({ user, token }) => {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      const resetUrl = `${appUrl}/reset-password?token=${token}`;
+      await sendPasswordResetEmail({
+        to: user.email,
+        name: user.name || "User",
+        resetUrl,
+      });
+    },
+    resetPasswordTokenExpiresIn: 60 * 60, // 1 hour in seconds
   },
 
   session: {
