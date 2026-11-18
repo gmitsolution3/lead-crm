@@ -21,7 +21,12 @@ export const apiClient: AxiosInstance = axios.create({
 // Request interceptor
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // Dynamic headers or tokens can be attached here when needed
+    // Handle FormData uploads properly so boundary is auto-generated
+    if (typeof FormData !== "undefined" && config.data instanceof FormData) {
+      if (config.headers) {
+        delete config.headers["Content-Type"];
+      }
+    }
     return config;
   },
   (error: AxiosError) => {

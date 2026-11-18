@@ -12,6 +12,13 @@ import {
 import type { AxiosRequestConfig } from "axios";
 
 /**
+ * Helper to normalize query keys regardless of /api prefix or trailing slashes
+ */
+function normalizeKey(url: string): string {
+  return url.replace(/\/$/, "") || "/";
+}
+
+/**
  * 1. useFetch: Hook to fetch list or resource data with caching & revalidation.
  * Example:
  * const { data, isLoading, isError, error, refetch } = useFetch("/leads");
@@ -26,7 +33,8 @@ export function useFetch<TData = any>(
   >,
   axiosConfig?: AxiosRequestConfig,
 ) {
-  const queryKey: QueryKey = params ? [url, params] : [url];
+  const cleanUrl = normalizeKey(url);
+  const queryKey: QueryKey = params ? [cleanUrl, params] : [cleanUrl];
 
   const query = useQuery<TData, Error, TData, QueryKey>({
     queryKey,
@@ -65,7 +73,7 @@ export function useFetchById<TData = any>(
   >,
   axiosConfig?: AxiosRequestConfig,
 ) {
-  const cleanUrl = url.replace(/\/$/, "");
+  const cleanUrl = normalizeKey(url);
   const queryKey: QueryKey = [cleanUrl, id];
 
   const query = useQuery<TData, Error, TData, QueryKey>({
@@ -114,7 +122,7 @@ export function usePost<TData = any, TVariables = any>(
   axiosConfig?: AxiosRequestConfig,
 ) {
   const queryClient = useQueryClient();
-  const cleanUrl = url.replace(/\/$/, "");
+  const cleanUrl = normalizeKey(url);
 
   const mutation = useMutation<TData, Error, TVariables, unknown>({
     mutationFn: async (variables: TVariables) => {
@@ -166,7 +174,7 @@ export function usePatch<TData = any, TVariables = any>(
   axiosConfig?: AxiosRequestConfig,
 ) {
   const queryClient = useQueryClient();
-  const cleanUrl = url.replace(/\/$/, "");
+  const cleanUrl = normalizeKey(url);
 
   const mutation = useMutation<TData, Error, TVariables, unknown>({
     mutationFn: async (variables: any) => {
@@ -246,7 +254,7 @@ export function useDelete<
   axiosConfig?: AxiosRequestConfig,
 ) {
   const queryClient = useQueryClient();
-  const cleanUrl = url.replace(/\/$/, "");
+  const cleanUrl = normalizeKey(url);
 
   const mutation = useMutation<TData, Error, TVariables, unknown>({
     mutationFn: async (variables: TVariables) => {
@@ -259,6 +267,14 @@ export function useDelete<
           endpoint,
           axiosConfig,
         );
+        return response.data;
+      }
+
+      if (variables && typeof variables === "object" && "params" in variables) {
+        const response = await apiClient.delete<TData>(url, {
+          params: (variables as any).params,
+          ...axiosConfig,
+        });
         return response.data;
       }
 

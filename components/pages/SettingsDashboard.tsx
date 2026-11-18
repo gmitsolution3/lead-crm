@@ -112,7 +112,7 @@ export default function SettingsDashboard({ user: initialUser }: SettingsDashboa
   const [autoEnrichment, setAutoEnrichment] = useState(true);
   const [dailyLimit, setDailyLimit] = useState("500");
 
-  // Fetch live user profile from MongoDB
+  // Fetch live user profile from MongoDB via Next.js internal API
   const fetchProfile = async () => {
     try {
       const res = await fetch("/api/user/profile");
@@ -195,7 +195,7 @@ export default function SettingsDashboard({ user: initialUser }: SettingsDashboa
     }
   };
 
-  // Upload Avatar to Cloudinary
+  // Upload Avatar to Cloudinary via Next.js API
   const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -298,7 +298,7 @@ export default function SettingsDashboard({ user: initialUser }: SettingsDashboa
     }
   };
 
-  // Change Password
+  // Change Password via Next.js API
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordFeedback(null);
