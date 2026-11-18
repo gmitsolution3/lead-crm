@@ -10,7 +10,7 @@ import { mockLeads, mockSearchGroups } from "@/lib/mock-data";
 import { Lead, SearchGroup } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Download, CheckCircle2, AlertCircle } from "lucide-react";
+import { ArrowLeft, Download, CheckCircle2, AlertCircle, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface GroupLeadsDashboardProps {
@@ -119,6 +119,8 @@ export default function GroupLeadsDashboard({
       l.searchQuery?.toLowerCase() === decodedId.toLowerCase()
     );
   });
+
+  const potentialCount = groupLeads.filter((l) => !l.website).length;
 
   const handleSelectLead = (lead: Lead) => {
     setSelectedLead(lead);
@@ -239,13 +241,23 @@ export default function GroupLeadsDashboard({
               <ArrowLeft className="h-4 w-4" />
               <span>Back to Search Groups</span>
             </Button>
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex flex-wrap items-center gap-2 mb-1">
               <span className="text-xs font-semibold uppercase tracking-wider text-stone-500">
                 Search Group Dataset
               </span>
               <Badge variant="sage" className="text-[10px]">
                 {groupLeads.length} {groupLeads.length === 1 ? "lead" : "leads"}
               </Badge>
+              {potentialCount > 0 && (
+                <Badge
+                  variant="terracotta"
+                  className="text-[10px] gap-1 font-semibold bg-terracotta-100 text-terracotta-800 border-terracotta-200"
+                  title={`${potentialCount} businesses in this group without a website`}
+                >
+                  <Sparkles className="h-2.5 w-2.5 text-terracotta-600" />
+                  {potentialCount} Potential {potentialCount === 1 ? "Client" : "Clients"} (No Website)
+                </Badge>
+              )}
               {targetGroup && (
                 <span className="text-xs text-stone-400 bg-oatmeal-200/70 px-2 py-0.5 rounded-md">
                   {targetGroup.groupId}

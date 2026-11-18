@@ -27,6 +27,9 @@ import {
   Filter,
   ArrowUpDown,
   Download,
+  Sparkles,
+  Globe,
+  ExternalLink,
 } from "lucide-react";
 import {
   FacebookIcon,
@@ -52,7 +55,12 @@ export function LeadTable({
 }: LeadTableProps) {
   const [tableSearch, setTableSearch] = useState("");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const [websiteFilter, setWebsiteFilter] = useState<"all" | "no-website" | "has-website">("all");
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "name_asc" | "name_desc">("newest");
+
+  // Counts for quick filter
+  const noWebsiteCount = useMemo(() => leads.filter((l) => !l.website).length, [leads]);
+  const hasWebsiteCount = useMemo(() => leads.filter((l) => Boolean(l.website)).length, [leads]);
 
   // Effective search combines table internal search and external global search
   const effectiveSearch = (tableSearch || externalSearch).trim().toLowerCase();
@@ -61,6 +69,14 @@ export function LeadTable({
   const filteredLeads = useMemo(() => {
     return leads
       .filter((lead) => {
+        // Website / Potential Client filter
+        if (websiteFilter === "no-website" && lead.website) {
+          return false;
+        }
+        if (websiteFilter === "has-website" && !lead.website) {
+          return false;
+        }
+
         // Source filter
         if (sourceFilter !== "all" && lead.source.toLowerCase() !== sourceFilter.toLowerCase()) {
           return false;
@@ -76,11 +92,12 @@ export function LeadTable({
 
         return (
           lead.name.toLowerCase().includes(effectiveSearch) ||
-          lead.email.toLowerCase().includes(effectiveSearch) ||
-          lead.phone.toLowerCase().includes(effectiveSearch) ||
-          lead.searchQuery.toLowerCase().includes(effectiveSearch) ||
-          lead.address.toLowerCase().includes(effectiveSearch) ||
-          lead.remark.toLowerCase().includes(effectiveSearch)
+          lead.email?.toLowerCase().includes(effectiveSearch) ||
+          lead.phone?.toLowerCase().includes(effectiveSearch) ||
+          lead.website?.toLowerCase().includes(effectiveSearch) ||
+          lead.searchQuery?.toLowerCase().includes(effectiveSearch) ||
+          lead.address?.toLowerCase().includes(effectiveSearch) ||
+          lead.remark?.toLowerCase().includes(effectiveSearch)
         );
       })
       .sort((a, b) => {
@@ -98,7 +115,7 @@ export function LeadTable({
         }
         return 0;
       });
-  }, [leads, sourceFilter, selectedGroupQuery, effectiveSearch, sortBy]);
+  }, [leads, websiteFilter, sourceFilter, selectedGroupQuery, effectiveSearch, sortBy]);
 
   // Unique sources for filter dropdown
   const uniqueSources = useMemo(() => {
@@ -144,6 +161,7 @@ export function LeadTable({
       "Phone",
       "Email",
       "Website",
+      "Potential Client",
       "Source",
       "Search Query",
       "Address",
@@ -159,7 +177,8 @@ export function LeadTable({
       `"${l.name.replace(/"/g, '""')}"`,
       `"${l.phone}"`,
       `"${l.email}"`,
-      `"${l.website}"`,
+      `"${l.website || ""}"`,
+      `"${!l.website ? "Yes (No Website)" : "No"}"`,
       `"${l.source}"`,
       `"${l.searchQuery.replace(/"/g, '""')}"`,
       `"${l.address.replace(/"/g, '""')}"`,
@@ -194,6 +213,45 @@ export function LeadTable({
               placeholder="Filter current view..."
               className="h-9 pl-8 text-xs bg-oatmeal-100/60 border-stone-200"
             />
+          </div>
+
+          {/* Quick Filter: All vs Potential Clients (No Website) */}
+          <div className="flex items-center rounded-xl bg-oatmeal-200/70 p-1 border border-stone-200/80">
+            <button
+              type="button"
+              onClick={() => setWebsiteFilter("all")}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                websiteFilter === "all"
+                  ? "bg-paper text-botanical-900 shadow-xs"
+                  : "text-stone-600 hover:text-botanical-900"
+              }`}
+            >
+              All ({leads.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setWebsiteFilter("no-website")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                websiteFilter === "no-website"
+                  ? "bg-terracotta-100 text-terracotta-900 shadow-xs border border-terracotta-300"
+                  : "text-terracotta-700 hover:bg-terracotta-50/80"
+              }`}
+              title="Leads without website are prime potential clients"
+            >
+              <Sparkles className="h-3 w-3 text-terracotta-600" />
+              <span>Potential Clients ({noWebsiteCount})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setWebsiteFilter("has-website")}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                websiteFilter === "has-website"
+                  ? "bg-paper text-botanical-900 shadow-xs"
+                  : "text-stone-600 hover:text-botanical-900"
+              }`}
+            >
+              With Website ({hasWebsiteCount})
+            </button>
           </div>
 
           {/* Source filter */}
@@ -254,12 +312,13 @@ export function LeadTable({
           </DropdownMenu>
 
           {/* Reset button if filtered */}
-          {(sourceFilter !== "all" || tableSearch || selectedGroupQuery) && (
+          {(sourceFilter !== "all" || websiteFilter !== "all" || tableSearch || selectedGroupQuery) && (
             <Button
               variant="ghost"
               size="sm"
               onClick={() => {
                 setSourceFilter("all");
+                setWebsiteFilter("all");
                 setTableSearch("");
                 onClearGroupFilter?.();
               }}
@@ -293,24 +352,25 @@ export function LeadTable({
         <Table>
           <TableHeader>
             <TableRow className="border-b border-stone-200 bg-oatmeal-200/60 hover:bg-oatmeal-200/60">
-              <TableHead className="w-[280px]">Lead / Business Name</TableHead>
-              <TableHead className="w-[260px]">Contact Info</TableHead>
-              <TableHead className="w-[140px]">Source</TableHead>
-              <TableHead className="w-[240px]">Search Query</TableHead>
-              <TableHead className="w-[160px] text-center">Social Links</TableHead>
-              <TableHead className="w-[100px] text-right">Added</TableHead>
+              <TableHead className="w-[260px]">Lead / Business Name</TableHead>
+              <TableHead className="w-[200px]">Contact Info</TableHead>
+              <TableHead className="w-[180px]">Website / Status</TableHead>
+              <TableHead className="w-[130px]">Source</TableHead>
+              <TableHead className="w-[200px]">Search Query</TableHead>
+              <TableHead className="w-[140px] text-center">Social Links</TableHead>
+              <TableHead className="w-[90px] text-right">Added</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredLeads.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-44 text-center">
+                <TableCell colSpan={7} className="h-44 text-center">
                   <div className="flex flex-col items-center justify-center text-stone-500">
                     <p className="text-base font-semibold text-botanical-900">
                       No leads match your current filter
                     </p>
                     <p className="text-xs text-stone-400 mt-1">
-                      Try adjusting the search query or resetting source filters.
+                      Try adjusting the search query, website filter, or resetting source filters.
                     </p>
                   </div>
                 </TableCell>
@@ -329,7 +389,13 @@ export function LeadTable({
                     {/* Name Column */}
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sage-200/80 font-bold text-sm text-botanical-900 shadow-sm">
+                        <div
+                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl font-bold text-sm shadow-sm ${
+                            !lead.website
+                              ? "bg-terracotta-100 text-terracotta-900 border border-terracotta-200"
+                              : "bg-sage-200/80 text-botanical-900"
+                          }`}
+                        >
                           {lead.name.charAt(0)}
                         </div>
                         <div className="min-w-0">
@@ -347,7 +413,7 @@ export function LeadTable({
                     <TableCell>
                       <div className="flex flex-col space-y-1 text-xs">
                         {lead.email ? (
-                          <div className="flex items-center gap-1.5 text-stone-700 font-medium truncate max-w-[220px]">
+                          <div className="flex items-center gap-1.5 text-stone-700 font-medium truncate max-w-[200px]">
                             <Mail className="h-3 w-3 text-sage-600 shrink-0" />
                             <span className="truncate">{lead.email}</span>
                           </div>
@@ -364,6 +430,40 @@ export function LeadTable({
                           <span className="text-[11px] text-stone-400 italic">No phone</span>
                         )}
                       </div>
+                    </TableCell>
+
+                    {/* Website / Opportunity Status */}
+                    <TableCell>
+                      {lead.website ? (
+                        <a
+                          href={
+                            lead.website.startsWith("http")
+                              ? lead.website
+                              : `https://${lead.website}`
+                          }
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-1.5 text-xs text-botanical-800 hover:text-botanical-600 hover:underline max-w-[160px] truncate"
+                          title={lead.website}
+                        >
+                          <Globe className="h-3.5 w-3.5 text-sage-600 shrink-0" />
+                          <span className="truncate">
+                            {lead.website.replace(/^https?:\/\/(www\.)?/, "")}
+                          </span>
+                          <ExternalLink className="h-2.5 w-2.5 text-stone-400 shrink-0" />
+                        </a>
+                      ) : (
+                        <div className="flex flex-col items-start gap-0.5">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-terracotta-100/90 border border-terracotta-300/80 px-2 py-0.5 text-[10px] font-semibold text-terracotta-800 shadow-2xs whitespace-nowrap">
+                            <Sparkles className="h-2.5 w-2.5 text-terracotta-600 shrink-0" />
+                            Potential Client
+                          </span>
+                          <span className="text-[10px] text-stone-400 italic pl-1">
+                            No website
+                          </span>
+                        </div>
+                      )}
                     </TableCell>
 
                     {/* Source Badge */}

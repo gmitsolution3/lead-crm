@@ -215,6 +215,7 @@ export default function OverviewDashboard({ user }: OverviewDashboardProps) {
   // Calculations for metrics
   const totalLeads = leads.length;
   const totalGroupsCount = groups.length;
+  const potentialCount = leads.filter((l) => !l.website).length;
   const verifiedCount = leads.filter(
     (l) => Boolean(l.phone) && Boolean(l.email)
   ).length;
@@ -280,6 +281,7 @@ export default function OverviewDashboard({ user }: OverviewDashboardProps) {
           totalLeads={totalLeads}
           totalGroups={totalGroupsCount}
           conversionRate={conversionRate}
+          potentialClients={potentialCount}
         />
 
         {/* Split Row: Activity Stream + Extraction Channels breakdown */}

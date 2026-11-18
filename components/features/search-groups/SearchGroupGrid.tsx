@@ -21,14 +21,22 @@ export function SearchGroupGrid({
 }: SearchGroupGridProps) {
   const [filterText, setFilterText] = useState("");
 
-  // Map each group to its lead count
-  const groupLeadCounts = React.useMemo(() => {
+  // Map each group to its total leads and potential clients (no website)
+  const { groupLeadCounts, groupPotentialCounts } = React.useMemo(() => {
     const counts: Record<string, number> = {};
+    const potentials: Record<string, number> = {};
+
     leads.forEach((lead) => {
-      counts[lead.groupId] = (counts[lead.groupId] || 0) + 1;
-      counts[lead.searchQuery] = (counts[lead.searchQuery] || 0) + 1;
+      const keys = [lead.groupId, lead.searchQuery].filter(Boolean);
+      keys.forEach((key) => {
+        counts[key] = (counts[key] || 0) + 1;
+        if (!lead.website) {
+          potentials[key] = (potentials[key] || 0) + 1;
+        }
+      });
     });
-    return counts;
+
+    return { groupLeadCounts: counts, groupPotentialCounts: potentials };
   }, [leads]);
 
   const filteredGroups = groups.filter(
@@ -105,11 +113,21 @@ export function SearchGroupGrid({
               groupLeadCounts[group.query] ||
               leads.filter((l) => l.groupId === group.groupId || l.searchQuery === group.query).length;
 
+            const potentialCount =
+              groupPotentialCounts[group.groupId] ??
+              groupPotentialCounts[group.query] ??
+              leads.filter(
+                (l) =>
+                  (l.groupId === group.groupId || l.searchQuery === group.query) &&
+                  !l.website
+              ).length;
+
             return (
               <motion.div key={group.groupId} variants={itemVariants}>
                 <SearchGroupCard
                   group={group}
                   leadCount={count}
+                  potentialCount={potentialCount}
                   onFilterByGroup={onSelectGroupQuery}
                 />
               </motion.div>

@@ -22,6 +22,7 @@ import {
   Layers,
   FileText,
   Bookmark,
+  Sparkles,
 } from "lucide-react";
 import {
   FacebookIcon,
@@ -97,6 +98,15 @@ export function LeadDetailSheet({
             >
               {lead.source}
             </Badge>
+            {!lead.website && (
+              <Badge
+                variant="terracotta"
+                className="text-xs px-2.5 py-0.5 rounded-full font-semibold gap-1 bg-terracotta-100 text-terracotta-800 border-terracotta-300 shadow-2xs"
+              >
+                <Sparkles className="h-3 w-3 text-terracotta-600" />
+                Potential Client • No Website
+              </Badge>
+            )}
             <span className="text-xs text-stone-400 bg-oatmeal-200/70 px-2 py-0.5 rounded-md">
               ID: {lead.leadId}
             </span>
@@ -121,6 +131,30 @@ export function LeadDetailSheet({
 
         {/* Paper Body Content */}
         <div className="mt-8 space-y-8">
+          {/* Potential Client Opportunity Callout (when no website) */}
+          {!lead.website && (
+            <div className="rounded-2xl border border-terracotta-300/80 bg-terracotta-50/70 p-4 shadow-sm">
+              <div className="flex items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-terracotta-100 text-terracotta-700 border border-terracotta-200">
+                  <Sparkles className="h-4.5 w-4.5 text-terracotta-600" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h5 className="text-xs font-bold uppercase tracking-wider text-terracotta-900">
+                      High-Conversion Potential Client
+                    </h5>
+                    <span className="text-[10px] bg-terracotta-200 text-terracotta-800 font-semibold px-2 py-0.5 rounded-full">
+                      No Website Detected
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-terracotta-800 leading-relaxed">
+                    This business has no active website. Prime outreach prospect for web design, digital branding, domain registration, and Google Business profile optimization.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Section: Direct Contact Channels */}
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-wider text-botanical-800 mb-3 flex items-center gap-2">
@@ -199,8 +233,8 @@ export function LeadDetailSheet({
               </div>
             </div>
 
-            {/* Website Link */}
-            {lead.website && (
+            {/* Website Link or Potential Client Status */}
+            {lead.website ? (
               <div className="mt-3 rounded-xl border border-stone-200 bg-paper p-3.5 flex items-center justify-between shadow-sm">
                 <div className="flex items-center gap-2 min-w-0">
                   <Globe className="h-4 w-4 text-botanical-700 shrink-0" />
@@ -208,7 +242,11 @@ export function LeadDetailSheet({
                     Website:
                   </span>
                   <a
-                    href={lead.website}
+                    href={
+                      lead.website.startsWith("http")
+                        ? lead.website
+                        : `https://${lead.website}`
+                    }
                     target="_blank"
                     rel="noreferrer"
                     className="text-sm font-medium text-botanical-800 hover:underline truncate"
@@ -217,13 +255,32 @@ export function LeadDetailSheet({
                   </a>
                 </div>
                 <a
-                  href={lead.website}
+                  href={
+                    lead.website.startsWith("http")
+                      ? lead.website
+                      : `https://${lead.website}`
+                  }
                   target="_blank"
                   rel="noreferrer"
                   className="text-stone-400 hover:text-botanical-700 p-1 cursor-pointer"
                 >
                   <ExternalLink className="h-4 w-4" />
                 </a>
+              </div>
+            ) : (
+              <div className="mt-3 rounded-xl border border-dashed border-terracotta-300/80 bg-terracotta-50/50 p-3.5 flex items-center justify-between shadow-2xs">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Globe className="h-4 w-4 text-terracotta-600 shrink-0" />
+                  <span className="text-xs text-stone-500 font-medium shrink-0">
+                    Website:
+                  </span>
+                  <span className="text-xs font-semibold text-terracotta-800 truncate">
+                    No Website Detected
+                  </span>
+                </div>
+                <span className="text-[10px] bg-terracotta-100 text-terracotta-800 font-semibold px-2 py-0.5 rounded-full border border-terracotta-200">
+                  Potential Client
+                </span>
               </div>
             )}
           </div>

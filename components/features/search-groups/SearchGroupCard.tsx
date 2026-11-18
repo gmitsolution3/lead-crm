@@ -5,6 +5,7 @@ import {
   FolderKanban,
   Users,
   ArrowRight,
+  Sparkles,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,12 +16,14 @@ import { formatDate } from "@/lib/utils";
 interface SearchGroupCardProps {
   group: SearchGroup;
   leadCount: number;
+  potentialCount?: number;
   onFilterByGroup: (query: string) => void;
 }
 
 export function SearchGroupCard({
   group,
   leadCount,
+  potentialCount = 0,
   onFilterByGroup,
 }: SearchGroupCardProps) {
   return (
@@ -42,10 +45,22 @@ export function SearchGroupCard({
             </span>
           </div>
 
-          <Badge variant="sage" className="gap-1 font-semibold text-xs">
-            <Users className="h-3 w-3" />
-            {leadCount} leads
-          </Badge>
+          <div className="flex flex-wrap items-center justify-end gap-1.5">
+            <Badge variant="sage" className="gap-1 font-semibold text-xs">
+              <Users className="h-3 w-3" />
+              {leadCount} {leadCount === 1 ? "lead" : "leads"}
+            </Badge>
+            {potentialCount > 0 && (
+              <Badge
+                variant="terracotta"
+                className="gap-1 font-semibold text-xs bg-terracotta-100 text-terracotta-800 border-terracotta-200"
+                title={`${potentialCount} businesses without a website (high-conversion potential clients)`}
+              >
+                <Sparkles className="h-2.5 w-2.5 text-terracotta-600" />
+                {potentialCount} potential
+              </Badge>
+            )}
+          </div>
         </div>
 
         {/* Search Query Header */}
