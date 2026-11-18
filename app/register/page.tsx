@@ -146,16 +146,18 @@ export default function RegisterPage() {
       {/* Top Navigation / Brand Bar */}
       <header className="relative z-10 w-full max-w-6xl mx-auto flex items-center justify-between py-2">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-botanical-700 text-paper shadow-sm">
-            <Sprout className="h-5 w-5 text-sage-200" />
-          </div>
+          <img
+            src="/app-icon-256x256.png"
+            alt="GM Lead Generator"
+            className="h-10 w-10 rounded-2xl object-contain shadow-sm"
+          />
           <div>
             <div className="flex items-center gap-1.5">
               <span className="text-base font-bold tracking-tight text-botanical-900">
-                Verdant
+                GM
               </span>
               <span className="text-xs font-semibold uppercase tracking-wider text-terracotta-500">
-                Leads
+                Lead Generator
               </span>
             </div>
             <p className="text-[11px] text-stone-500 leading-none">Admin Workspace</p>
@@ -167,8 +169,8 @@ export default function RegisterPage() {
             variant="outline"
             className="border-stone-300/70 bg-[#FCFBF8]/80 text-stone-600 text-[11px] gap-1.5 py-1 px-3 backdrop-blur-xs"
           >
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span>MongoDB Connected</span>
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            <span>System Operational</span>
           </Badge>
         </div>
       </header>
@@ -226,9 +228,11 @@ export default function RegisterPage() {
             <>
               {/* Card Header */}
               <div className="text-center mb-6">
-                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-botanical-100 text-botanical-800 border border-botanical-200 shadow-xs">
-                  <UserPlus className="h-6 w-6 text-botanical-700" />
-                </div>
+                <img
+                  src="/app-icon-256x256.png"
+                  alt="GM Lead Generator"
+                  className="mx-auto mb-3 h-14 w-14 rounded-2xl object-contain shadow-xs"
+                />
 
                 <div className="inline-flex items-center gap-1.5 rounded-full border border-botanical-300/80 bg-botanical-50/70 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-botanical-800 mb-2">
                   <ShieldCheck className="h-3 w-3 text-botanical-600" />
@@ -468,19 +472,19 @@ export default function RegisterPage() {
         <div className="mt-6 flex items-center justify-center gap-4 text-[11px] text-stone-500">
           <span className="flex items-center gap-1.5">
             <ShieldCheck className="h-3.5 w-3.5 text-botanical-700" />
-            <span>First User Admin Bootstrap</span>
+            <span>Admin Role Verification</span>
           </span>
           <span>•</span>
           <span className="flex items-center gap-1.5">
-            <Database className="h-3.5 w-3.5 text-sage-600" />
-            <span>Admin Role Gate</span>
+            <CheckCircle2 className="h-3.5 w-3.5 text-sage-600" />
+            <span>Role-Based Permissions</span>
           </span>
         </div>
       </main>
 
       {/* Footer */}
       <footer className="relative z-10 w-full max-w-6xl mx-auto py-3 text-center text-[11px] text-stone-400">
-        Verdant Botanical CRM • High Performance Lead Extraction • Next.js 16
+        &copy; 2026 GM Lead Generator &bull; Lead Extraction System
       </footer>
     </div>
   );

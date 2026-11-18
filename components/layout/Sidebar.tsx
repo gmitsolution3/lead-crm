@@ -44,7 +44,7 @@ export function Sidebar({
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
   const userName = session?.user?.name || "Admin Architect";
-  const userEmail = session?.user?.email || "admin@verdant.local";
+  const userEmail = session?.user?.email || "admin@gmleadgenerator.com";
   const initials =
     userName
       .split(" ")
@@ -157,19 +157,21 @@ export function Sidebar({
       <div className="flex flex-col flex-1">
         {/* Brand Header */}
         <div className="flex h-18 items-center gap-3 border-b border-stone-200/80 px-6 py-4 shrink-0">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-botanical-700 text-paper shadow-sm">
-            <Sprout className="h-6 w-6 text-sage-200" />
-          </div>
+          <img
+            src="/app-icon-256x256.png"
+            alt="GM Lead Generator"
+            className="h-10 w-10 rounded-xl object-contain shadow-sm"
+          />
           <div>
             <div className="flex items-center gap-1.5">
               <span className="text-lg font-bold tracking-tight text-botanical-900">
-                Verdant
+                GM
               </span>
               <span className="text-xs font-semibold uppercase tracking-wider text-terracotta-500">
-                Leads
+                Lead Generator
               </span>
             </div>
-            <p className="text-xs text-stone-500">Admin CRM Console</p>
+            <p className="text-xs text-stone-500">Lead Extraction System</p>
           </div>
         </div>
 

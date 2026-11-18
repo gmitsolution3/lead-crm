@@ -105,12 +105,14 @@ function ResetPasswordForm() {
             href="/login"
             className="inline-flex items-center gap-2 mb-3.5 group cursor-pointer"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-botanical-900 text-botanical-100 shadow-md group-hover:bg-botanical-800 transition-colors">
-              <span className="text-xl">🌿</span>
-            </div>
+            <img
+              src="/app-icon-256x256.png"
+              alt="GM Lead Generator"
+              className="h-10 w-10 rounded-xl object-contain shadow-md"
+            />
             <div className="text-left">
               <span className="text-lg font-bold text-botanical-900 tracking-tight block leading-tight">
-                GM Lead Gen
+                GM Lead Generator
               </span>
               <span className="text-[10px] font-semibold text-botanical-600 uppercase tracking-wider block">
                 Lead Intelligence

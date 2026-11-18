@@ -6,7 +6,7 @@ const baseUrl =
     : process.env.NEXT_PUBLIC_API_BASE_URL) || "http://localhost:9000/api/v1";
 
 /**
- * Pre-configured Axios instance for Verdant Leads API calls.
+ * Pre-configured Axios instance for GM Lead Generator API calls.
  */
 export const apiClient: AxiosInstance = axios.create({
   baseURL: baseUrl,

@@ -126,7 +126,7 @@ export default function SettingsDashboard({ user: initialUser }: SettingsDashboa
         const fallback: UserProfileData = {
           id: initialUser?.id || session?.user?.id || "",
           name: initialUser?.name || session?.user?.name || "Administrator",
-          email: initialUser?.email || session?.user?.email || "admin@verdant.local",
+          email: initialUser?.email || session?.user?.email || "admin@gmleadgenerator.com",
           phone: initialUser?.phone || "",
           role: initialUser?.role || (session?.user as any)?.role || "admin",
           image: initialUser?.image || session?.user?.image || null,
@@ -506,7 +506,7 @@ export default function SettingsDashboard({ user: initialUser }: SettingsDashboa
                     </div>
                     <p className="text-xs text-stone-500 mt-0.5 flex items-center gap-1.5">
                       <Mail className="h-3.5 w-3.5 text-stone-400" />
-                      <span>{profile?.email || "admin@verdant.local"}</span>
+                      <span>{profile?.email || "admin@gmleadgenerator.com"}</span>
                     </p>
                     <p className="text-[11px] text-stone-400 mt-1 flex items-center gap-1.5">
                       <Calendar className="h-3.5 w-3.5 text-stone-400" />

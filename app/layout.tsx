@@ -12,8 +12,18 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Verdant Leads | Lead Generation Dashboard",
-  description: "A calming, botanical SaaS dashboard to manage leads captured from browser extensions.",
+  title: "GM Lead Generator | Lead Generation Dashboard",
+  description: "High-performance lead management and extraction dashboard for GM Lead Generator.",
+  icons: {
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+    ],
+    apple: [
+      { url: "/favicon-180x180.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
 };
 
 export default function RootLayout({
