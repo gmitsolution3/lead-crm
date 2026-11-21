@@ -95,6 +95,18 @@ export function SearchGroupCard({
           Source: Extension crawler
         </span>
         <div className="flex items-center gap-1.5">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onFilterByGroup(group.groupId || group.query);
+            }}
+            className="text-xs font-semibold text-botanical-800 hover:text-botanical-900 hover:bg-sage-100/70 gap-1.5 rounded-xl h-8 px-3 cursor-pointer"
+          >
+            <span>View Leads</span>
+            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+          </Button>
           {onAddLead && (
             <Button
               variant="outline"
@@ -110,18 +122,6 @@ export function SearchGroupCard({
               <span>Add Lead</span>
             </Button>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              onFilterByGroup(group.groupId || group.query);
-            }}
-            className="text-xs font-semibold text-botanical-800 hover:text-botanical-900 hover:bg-sage-100/70 gap-1.5 rounded-xl h-8 px-3 cursor-pointer"
-          >
-            <span>View Leads</span>
-            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
-          </Button>
         </div>
       </div>
     </Card>

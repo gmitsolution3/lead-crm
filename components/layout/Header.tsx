@@ -1,11 +1,12 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   Bell,
   RefreshCw,
   Menu,
   LogOut,
+  Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +19,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useSession, signOut } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
+import { useFetch } from "@/hooks";
+import { LeadFormModal } from "@/components/features/leads/LeadFormModal";
+import type { SearchGroup } from "@/types";
 
 interface HeaderProps {
   onOpenMobileSidebar?: () => void;
@@ -34,6 +38,13 @@ export function Header({
 }: HeaderProps) {
   const router = useRouter();
   const { data: session } = useSession();
+  const [isAddLeadOpen, setIsAddLeadOpen] = useState(false);
+  const { data: searchGroupsResponse } = useFetch<any>("/search-groups");
+  const searchGroups: SearchGroup[] = Array.isArray(searchGroupsResponse?.data)
+    ? searchGroupsResponse.data
+    : Array.isArray(searchGroupsResponse)
+    ? searchGroupsResponse
+    : [];
 
   const handleSignOut = async () => {
     try {
@@ -76,6 +87,16 @@ export function Header({
 
       {/* Right section: actions, sync status, notifications, profile */}
       <div className="flex items-center gap-2 sm:gap-3">
+        {/* Add Lead Button */}
+        <Button
+          size="sm"
+          onClick={() => setIsAddLeadOpen(true)}
+          className="inline-flex items-center gap-1.5 h-9 text-xs bg-botanical-800 hover:bg-botanical-900 text-white cursor-pointer rounded-xl shadow-xs font-semibold"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          <span>Add Lead</span>
+        </Button>
+
         {/* Sync Button */}
         <Button
           variant="outline"
@@ -178,6 +199,12 @@ export function Header({
           </span>
         </div>
       </div>
+
+      <LeadFormModal
+        isOpen={isAddLeadOpen}
+        onClose={() => setIsAddLeadOpen(false)}
+        searchGroups={searchGroups}
+      />
     </header>
   );
 }

@@ -220,15 +220,6 @@ export default function LeadsGroupDashboard({
 
         {/* Actions & Badges */}
         <div className="flex flex-wrap items-center gap-3 self-start sm:self-auto">
-          <Button
-            size="sm"
-            onClick={() => setIsGlobalAddLeadOpen(true)}
-            className="text-xs h-9 bg-botanical-800 hover:bg-botanical-900 text-paper gap-1.5 cursor-pointer rounded-xl shadow-xs font-semibold"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            <span>Add Lead</span>
-          </Button>
-
           {potentialClientsCount > 0 && (
             <span
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-terracotta-100 text-terracotta-900 border border-terracotta-200/90 shadow-2xs"
@@ -243,6 +234,15 @@ export default function LeadsGroupDashboard({
             <FolderKanban className="h-3.5 w-3.5 text-stone-500" />
             <span>{meta.total} Filtered Groups</span>
           </div>
+
+          <Button
+            size="sm"
+            onClick={() => setIsGlobalAddLeadOpen(true)}
+            className="text-xs h-9 bg-botanical-800 hover:bg-botanical-900 text-white gap-1.5 cursor-pointer rounded-xl shadow-xs font-semibold"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span>Add Lead</span>
+          </Button>
         </div>
       </div>
 

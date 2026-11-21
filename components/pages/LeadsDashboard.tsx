@@ -436,15 +436,6 @@ export default function LeadsDashboard({
 
         <div className="flex items-center gap-2 self-start sm:self-auto">
           <Button
-            size="sm"
-            onClick={() => setIsAddLeadOpen(true)}
-            className="text-xs h-9 bg-botanical-800 hover:bg-botanical-900 text-paper gap-1.5 cursor-pointer rounded-xl shadow-xs font-semibold"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            <span>Add Lead</span>
-          </Button>
-
-          <Button
             variant="outline"
             size="sm"
             onClick={handleExportCSV}
@@ -453,6 +444,15 @@ export default function LeadsDashboard({
           >
             <Download className="h-3.5 w-3.5 text-sage-600" />
             <span>Export Group CSV</span>
+          </Button>
+
+          <Button
+            size="sm"
+            onClick={() => setIsAddLeadOpen(true)}
+            className="text-xs h-9 bg-botanical-800 hover:bg-botanical-900 text-white gap-1.5 cursor-pointer rounded-xl shadow-xs font-semibold"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span>Add Lead</span>
           </Button>
         </div>
       </div>

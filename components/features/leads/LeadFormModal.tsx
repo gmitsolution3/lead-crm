@@ -40,8 +40,35 @@ import {
   LinkedinIcon,
   WhatsAppIcon,
 } from "@/components/ui/icons";
-import { apiClient } from "@/lib/axios";
+import { usePost } from "@/hooks";
 import { useQueryClient } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
+const leadFormSchema = z.object({
+  name: z.string().trim().min(1, { message: "Business / Lead Name is required" }),
+  source: z.string().min(1, { message: "Lead Source is required" }),
+  groupId: z.string().optional(),
+  searchQuery: z.string().optional(),
+  phone: z.string().optional(),
+  email: z
+    .string()
+    .trim()
+    .optional()
+    .refine((val) => !val || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val), {
+      message: "Please enter a valid email address",
+    }),
+  website: z.string().optional(),
+  address: z.string().optional(),
+  whatsapp: z.string().optional(),
+  instagram: z.string().optional(),
+  linkedin: z.string().optional(),
+  facebook: z.string().optional(),
+  remark: z.string().optional(),
+});
+
+type LeadFormValues = z.infer<typeof leadFormSchema>;
 
 interface LeadFormModalProps {
   isOpen: boolean;
@@ -59,30 +86,52 @@ export function LeadFormModal({
   onSuccess,
 }: LeadFormModalProps) {
   const queryClient = useQueryClient();
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const [formData, setFormData] = useState({
-    name: "",
-    source: "Manual",
-    groupId: targetGroup?.groupId || searchGroups[0]?.groupId || "",
-    searchQuery: targetGroup?.query || searchGroups[0]?.query || "",
-    phone: "",
-    email: "",
-    website: "",
-    address: "",
-    whatsapp: "",
-    instagram: "",
-    linkedin: "",
-    facebook: "",
-    remark: "",
+  const { mutateAsync: saveLeadMutation, isPending: isSaving } = usePost(
+    "/leads/save",
+    {
+      invalidateQueries: [["/leads"], ["/search-groups"]],
+    }
+  );
+
+  const defaultGroupId = targetGroup?.groupId || searchGroups[0]?.groupId || "";
+  const defaultQuery = targetGroup?.query || searchGroups[0]?.query || "";
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    reset,
+    formState: { errors, isSubmitting: formIsSubmitting },
+  } = useForm<LeadFormValues>({
+    resolver: zodResolver(leadFormSchema),
+    defaultValues: {
+      name: "",
+      source: "Manual",
+      groupId: defaultGroupId,
+      searchQuery: defaultQuery,
+      phone: "",
+      email: "",
+      website: "",
+      address: "",
+      whatsapp: "",
+      instagram: "",
+      linkedin: "",
+      facebook: "",
+      remark: "",
+    },
   });
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const currentGroupId = watch("groupId");
+  const currentSearchQuery = watch("searchQuery");
+  const currentSource = watch("source") || "Manual";
+  const currentWebsite = watch("website");
 
   useEffect(() => {
     if (isOpen) {
-      setFormData({
+      reset({
         name: "",
         source: "Manual",
         groupId: targetGroup?.groupId || searchGroups[0]?.groupId || "",
@@ -97,10 +146,9 @@ export function LeadFormModal({
         facebook: "",
         remark: "",
       });
-      setErrors({});
       setSubmitError(null);
     }
-  }, [isOpen, targetGroup, searchGroups]);
+  }, [isOpen, targetGroup, searchGroups, reset]);
 
   const sources = [
     "Manual",
@@ -112,67 +160,34 @@ export function LeadFormModal({
     "Direct Outreach",
   ];
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors((prev) => {
-        const updated = { ...prev };
-        delete updated[name];
-        return updated;
-      });
-    }
-  };
-
-  const validate = () => {
-    const errs: Record<string, string> = {};
-    if (!formData.name.trim()) {
-      errs.name = "Business / Lead Name is required";
-    }
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
-      errs.email = "Please enter a valid email address";
-    }
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validate()) return;
-
-    setIsSubmitting(true);
+  const onSubmit = async (values: LeadFormValues) => {
     setSubmitError(null);
 
     try {
-      const selectedGroupId = formData.groupId || targetGroup?.groupId || undefined;
+      const selectedGroupId = values.groupId || targetGroup?.groupId || undefined;
       const selectedSearchQuery =
-        formData.searchQuery || targetGroup?.query || undefined;
+        values.searchQuery || targetGroup?.query || undefined;
 
       const payload = {
         groupId: selectedGroupId,
         searchQuery: selectedSearchQuery,
-        source: formData.source || "Manual",
-        name: formData.name.trim(),
-        phone: formData.phone.trim() || undefined,
-        email: formData.email.trim() || undefined,
-        website: formData.website.trim() || undefined,
-        address: formData.address.trim() || undefined,
-        whatsapp: formData.whatsapp.trim() || undefined,
-        instagram: formData.instagram.trim() || undefined,
-        linkedin: formData.linkedin.trim() || undefined,
-        facebook: formData.facebook.trim() || undefined,
-        remark: formData.remark.trim() || undefined,
+        source: values.source || "Manual",
+        name: values.name.trim(),
+        phone: values.phone?.trim() || undefined,
+        email: values.email?.trim() || undefined,
+        website: values.website?.trim() || undefined,
+        address: values.address?.trim() || undefined,
+        whatsapp: values.whatsapp?.trim() || undefined,
+        instagram: values.instagram?.trim() || undefined,
+        linkedin: values.linkedin?.trim() || undefined,
+        facebook: values.facebook?.trim() || undefined,
+        remark: values.remark?.trim() || undefined,
       };
 
-      const response = await apiClient.post("/leads/save", payload);
-      const savedResult = response.data?.data || response.data;
+      const response = await saveLeadMutation(payload);
+      const savedResult = response?.data || response;
 
-      // Invalidate react-query cache for real-time table sync
-      queryClient.invalidateQueries({ queryKey: ["/leads"] });
-      queryClient.invalidateQueries({ queryKey: ["/search-groups"] });
-
+      // Invalidate specific group query cache if present
       if (selectedGroupId) {
         queryClient.invalidateQueries({
           queryKey: [`/search-groups/${encodeURIComponent(selectedGroupId)}`],
@@ -189,10 +204,10 @@ export function LeadFormModal({
         err?.message ||
         "Failed to save lead. Please check server connection.";
       setSubmitError(msg);
-    } finally {
-      setIsSubmitting(false);
     }
   };
+
+  const isSubmitting = isSaving || formIsSubmitting;
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -224,7 +239,7 @@ export function LeadFormModal({
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-6">
           {/* SECTION 1: SEARCH GROUP & BUSINESS IDENTITY */}
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-botanical-800">
@@ -239,42 +254,39 @@ export function LeadFormModal({
                 Target Search Group <span className="text-terracotta-600">*</span>
               </Label>
               {targetGroup ? (
-                <div className="flex items-center justify-between gap-2 h-10 px-3.5 rounded-xl bg-oatmeal-100/90 border border-stone-200 text-xs text-botanical-900 font-semibold">
+                <div className="flex items-center gap-2 h-10 px-3.5 rounded-xl bg-oatmeal-100/90 border border-stone-200 text-xs text-botanical-900 font-semibold">
                   <span className="truncate">&ldquo;{targetGroup.query}&rdquo;</span>
-                  {targetGroup.groupId && (
-                    <span className="text-[10px] font-mono text-stone-500 bg-paper px-2 py-0.5 rounded border border-stone-200 shrink-0">
-                      {targetGroup.groupId}
-                    </span>
-                  )}
                 </div>
               ) : searchGroups.length > 0 ? (
                 <Select
-                  value={formData.groupId || searchGroups[0]?.groupId}
+                  value={currentGroupId || searchGroups[0]?.groupId}
                   onValueChange={(val) => {
                     const matched = searchGroups.find((g) => g.groupId === val);
-                    setFormData((prev) => ({
-                      ...prev,
-                      groupId: val ?? "",
-                      searchQuery: matched?.query ?? prev.searchQuery,
-                    }));
+                    setValue("groupId", val ?? "", { shouldValidate: true });
+                    if (matched?.query) {
+                      setValue("searchQuery", matched.query, { shouldValidate: true });
+                    }
                   }}
                 >
                   <SelectTrigger className="w-full h-10 text-xs bg-paper border-stone-300">
-                    <SelectValue placeholder="Select a Search Group" />
+                    <SelectValue placeholder="Select a Search Group">
+                      {(val) => {
+                        const matched = searchGroups.find((g) => g.groupId === val);
+                        return matched ? matched.query : (currentSearchQuery || "Select a Search Group");
+                      }}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {searchGroups.map((g) => (
                       <SelectItem key={g.groupId} value={g.groupId}>
-                        &ldquo;{g.query}&rdquo; ({g.groupId})
+                        {g.query}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               ) : (
                 <Input
-                  name="searchQuery"
-                  value={formData.searchQuery}
-                  onChange={handleChange}
+                  {...register("searchQuery")}
                   placeholder="e.g. vape shop in mirpur"
                   className="bg-paper border-stone-300 text-xs h-10"
                 />
@@ -286,9 +298,7 @@ export function LeadFormModal({
                 Business / Lead Name <span className="text-terracotta-600">*</span>
               </Label>
               <Input
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
+                {...register("name")}
                 placeholder="e.g. Vape Hub Mirpur"
                 className={`bg-paper border-stone-300 text-sm h-10 ${
                   errors.name ? "border-terracotta-500 focus-visible:ring-terracotta-500" : ""
@@ -296,7 +306,7 @@ export function LeadFormModal({
               />
               {errors.name && (
                 <p className="text-[11px] text-terracotta-600 flex items-center gap-1 mt-1">
-                  <AlertCircle className="h-3 w-3" /> {errors.name}
+                  <AlertCircle className="h-3 w-3" /> {errors.name.message}
                 </p>
               )}
             </div>
@@ -304,9 +314,9 @@ export function LeadFormModal({
             <div className="space-y-1.5">
               <Label className="text-xs font-medium text-stone-700">Lead Source</Label>
               <Select
-                value={formData.source}
+                value={currentSource}
                 onValueChange={(val) =>
-                  setFormData((prev) => ({ ...prev, source: val ?? "Manual" }))
+                  setValue("source", val ?? "Manual", { shouldValidate: true })
                 }
               >
                 <SelectTrigger className="w-full h-10 text-xs bg-paper border-stone-300">
@@ -336,9 +346,7 @@ export function LeadFormModal({
                   <Phone className="h-3 w-3 text-stone-400" /> Phone Number
                 </Label>
                 <Input
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
+                  {...register("phone")}
                   placeholder="e.g. 01711223344"
                   className="bg-paper border-stone-300 text-xs h-9.5"
                 />
@@ -349,9 +357,7 @@ export function LeadFormModal({
                   <Mail className="h-3 w-3 text-stone-400" /> Email Address
                 </Label>
                 <Input
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
+                  {...register("email")}
                   placeholder="contact@business.com"
                   className={`bg-paper border-stone-300 text-xs h-9.5 ${
                     errors.email ? "border-terracotta-500 focus-visible:ring-terracotta-500" : ""
@@ -359,7 +365,7 @@ export function LeadFormModal({
                 />
                 {errors.email && (
                   <p className="text-[11px] text-terracotta-600 flex items-center gap-1 mt-1">
-                    <AlertCircle className="h-3 w-3" /> {errors.email}
+                    <AlertCircle className="h-3 w-3" /> {errors.email.message}
                   </p>
                 )}
               </div>
@@ -370,7 +376,7 @@ export function LeadFormModal({
                 <Label className="text-xs font-medium text-stone-700 flex items-center gap-1.5">
                   <Globe className="h-3 w-3 text-stone-400" /> Official Website
                 </Label>
-                {!formData.website && (
+                {!currentWebsite && (
                   <span className="text-[10px] text-terracotta-700 font-medium flex items-center gap-1 bg-terracotta-50 border border-terracotta-200 px-1.5 py-0.5 rounded">
                     <Target className="h-2.5 w-2.5 text-terracotta-600" />
                     Will be marked as Potential Client
@@ -378,9 +384,7 @@ export function LeadFormModal({
                 )}
               </div>
               <Input
-                name="website"
-                value={formData.website}
-                onChange={handleChange}
+                {...register("website")}
                 placeholder="https://example.com (leave blank if no website)"
                 className="bg-paper border-stone-300 text-xs h-9.5"
               />
@@ -391,9 +395,7 @@ export function LeadFormModal({
                 <MapPin className="h-3 w-3 text-stone-400" /> Physical Address
               </Label>
               <Input
-                name="address"
-                value={formData.address}
-                onChange={handleChange}
+                {...register("address")}
                 placeholder="e.g. Plot 12, Road 4, Section 10, Mirpur, Dhaka"
                 className="bg-paper border-stone-300 text-xs h-9.5"
               />
@@ -413,9 +415,7 @@ export function LeadFormModal({
                   <WhatsAppIcon className="h-3.5 w-3.5 text-emerald-600" /> WhatsApp Number
                 </Label>
                 <Input
-                  name="whatsapp"
-                  value={formData.whatsapp}
-                  onChange={handleChange}
+                  {...register("whatsapp")}
                   placeholder="+8801711223344"
                   className="bg-paper border-stone-300 text-xs h-9.5"
                 />
@@ -426,9 +426,7 @@ export function LeadFormModal({
                   <FacebookIcon className="h-3.5 w-3.5 text-stone-600" /> Facebook Page URL
                 </Label>
                 <Input
-                  name="facebook"
-                  value={formData.facebook}
-                  onChange={handleChange}
+                  {...register("facebook")}
                   placeholder="https://facebook.com/page"
                   className="bg-paper border-stone-300 text-xs h-9.5"
                 />
@@ -439,9 +437,7 @@ export function LeadFormModal({
                   <InstagramIcon className="h-3.5 w-3.5 text-terracotta-600" /> Instagram URL
                 </Label>
                 <Input
-                  name="instagram"
-                  value={formData.instagram}
-                  onChange={handleChange}
+                  {...register("instagram")}
                   placeholder="https://instagram.com/handle"
                   className="bg-paper border-stone-300 text-xs h-9.5"
                 />
@@ -452,9 +448,7 @@ export function LeadFormModal({
                   <LinkedinIcon className="h-3.5 w-3.5 text-botanical-700" /> LinkedIn Profile URL
                 </Label>
                 <Input
-                  name="linkedin"
-                  value={formData.linkedin}
-                  onChange={handleChange}
+                  {...register("linkedin")}
                   placeholder="https://linkedin.com/company/handle"
                   className="bg-paper border-stone-300 text-xs h-9.5"
                 />
@@ -469,9 +463,7 @@ export function LeadFormModal({
               <span>Notes & Outreach Remarks</span>
             </div>
             <Textarea
-              name="remark"
-              value={formData.remark}
-              onChange={handleChange}
+              {...register("remark")}
               rows={3}
               placeholder="Add any outreach notes, conversation remarks, or client qualification details..."
               className="w-full bg-paper border-stone-300 text-xs"
@@ -485,18 +477,18 @@ export function LeadFormModal({
               variant="outline"
               onClick={onClose}
               disabled={isSubmitting}
-              className="border-stone-300 text-stone-700 text-xs h-10 px-4 rounded-xl cursor-pointer"
+              className="border-stone-300 text-stone-700 hover:text-stone-900 hover:bg-stone-100 text-xs h-10 px-4 rounded-xl cursor-pointer"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="bg-botanical-750 hover:bg-botanical-850 text-paper text-xs h-10 px-5 rounded-xl shadow-md gap-2 font-medium cursor-pointer"
+              className="bg-botanical-800 hover:bg-botanical-900 text-white text-xs h-10 px-5 rounded-xl shadow-md gap-2 font-semibold cursor-pointer transition-all"
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin text-sage-300" />
+                  <Loader2 className="h-4 w-4 animate-spin text-sage-200" />
                   <span>Saving Lead...</span>
                 </>
               ) : (
