@@ -5,6 +5,5 @@ export const instant = false;
 
 export default async function DashboardPage() {
   const session = await requireAdminAuth();
-
   return <OverviewDashboard user={session.user} />;
 }

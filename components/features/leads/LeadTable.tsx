@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Table,
   TableHeader,
@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Lead } from "@/types";
 import { formatDate } from "@/lib/utils";
-import { apiClient } from "@/lib/axios";
+import { useFetch } from "@/hooks";
 import {
   Mail,
   Phone,
@@ -90,27 +90,6 @@ export function LeadTable({
   const [page, setPage] = useState<number>(1);
   const [limit, setLimit] = useState<number>(10);
 
-  // Server-side loaded leads & pagination metadata
-  const [serverLeads, setServerLeads] = useState<Lead[]>(leads.slice(0, 10));
-  const [meta, setMeta] = useState<{
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-    totalAll?: number;
-    noWebsiteCount?: number;
-    hasWebsiteCount?: number;
-  }>({
-    page: 1,
-    limit: 10,
-    total: leads.length,
-    totalPages: Math.max(1, Math.ceil((leads.length || 1) / 10)),
-    totalAll: leads.length,
-    noWebsiteCount: leads.filter((l) => !l.website).length,
-    hasWebsiteCount: leads.filter((l) => Boolean(l.website)).length,
-  });
-  const [loading, setLoading] = useState(false);
-
   // Debounce search input so backend isn't spammed while typing
   const effectiveSearch = (tableSearch || externalSearch).trim();
 
@@ -124,74 +103,94 @@ export function LeadTable({
 
   const targetGroup = (groupId || selectedGroupQuery || "").trim();
 
-  // Fetch paginated & filtered leads from backend
-  const fetchServerLeads = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await apiClient.get<any>("/leads", {
-        params: {
-          page,
-          limit,
-          search: debouncedSearch || undefined,
-          source: sourceFilter !== "all" ? sourceFilter : undefined,
-          websiteFilter: websiteFilter !== "all" ? websiteFilter : undefined,
-          groupId: targetGroup || undefined,
-          sortBy: sortBy !== "default" ? sortBy : undefined,
-        },
+  // Query parameters for the reusable SWR useFetch hook
+  const queryParams = useMemo(() => {
+    return {
+      page,
+      limit,
+      search: debouncedSearch || undefined,
+      source: sourceFilter !== "all" ? sourceFilter : undefined,
+      websiteFilter: websiteFilter !== "all" ? websiteFilter : undefined,
+      groupId: targetGroup || undefined,
+      sortBy: sortBy !== "default" ? sortBy : undefined,
+    };
+  }, [page, limit, debouncedSearch, sourceFilter, websiteFilter, targetGroup, sortBy]);
+
+  // Fetch paginated & filtered leads using reusable SWR useFetch hook
+  const {
+    data: resData,
+    isLoading: isQueryLoading,
+    isFetching,
+  } = useFetch<any>("/leads", queryParams);
+
+  // Server-side loaded leads with fallback to props
+  const serverLeads = useMemo<Lead[]>(() => {
+    const items = resData?.data;
+    if (Array.isArray(items)) {
+      return items;
+    }
+    // Offline / props fallback
+    if (leads.length > 0) {
+      const filtered = leads.filter((l) => {
+        if (targetGroup && l.groupId !== targetGroup && l.searchQuery !== targetGroup) return false;
+        if (sourceFilter !== "all" && l.source.toLowerCase() !== sourceFilter.toLowerCase()) return false;
+        if (websiteFilter === "no-website" && l.website) return false;
+        if (websiteFilter === "has-website" && !l.website) return false;
+        if (debouncedSearch) {
+          const s = debouncedSearch.toLowerCase();
+          return (
+            l.name.toLowerCase().includes(s) ||
+            l.phone?.toLowerCase().includes(s) ||
+            l.email?.toLowerCase().includes(s) ||
+            l.website?.toLowerCase().includes(s) ||
+            l.address?.toLowerCase().includes(s)
+          );
+        }
+        return true;
       });
 
-      const items = res.data?.data;
-      const paginationMeta = res.data?.meta;
-
-      if (Array.isArray(items)) {
-        setServerLeads(items);
-      }
-      if (paginationMeta) {
-        setMeta(paginationMeta);
-      }
-    } catch {
-      // Offline fallback
-      if (leads.length > 0) {
-        let filtered = leads.filter((l) => {
-          if (targetGroup && l.groupId !== targetGroup && l.searchQuery !== targetGroup) return false;
-          if (sourceFilter !== "all" && l.source.toLowerCase() !== sourceFilter.toLowerCase()) return false;
-          if (websiteFilter === "no-website" && l.website) return false;
-          if (websiteFilter === "has-website" && !l.website) return false;
-          if (debouncedSearch) {
-            const s = debouncedSearch.toLowerCase();
-            return (
-              l.name.toLowerCase().includes(s) ||
-              l.phone?.toLowerCase().includes(s) ||
-              l.email?.toLowerCase().includes(s) ||
-              l.website?.toLowerCase().includes(s) ||
-              l.address?.toLowerCase().includes(s)
-            );
-          }
-          return true;
-        });
-
-        const total = filtered.length;
-        const totalPages = Math.max(1, Math.ceil(total / limit));
-        const skip = (page - 1) * limit;
-        setServerLeads(filtered.slice(skip, skip + limit));
-        setMeta({
-          page,
-          limit,
-          total,
-          totalPages,
-          totalAll: leads.length,
-          noWebsiteCount: leads.filter((l) => !l.website).length,
-          hasWebsiteCount: leads.filter((l) => Boolean(l.website)).length,
-        });
-      }
-    } finally {
-      setLoading(false);
+      const skip = (page - 1) * limit;
+      return filtered.slice(skip, skip + limit);
     }
-  }, [page, limit, debouncedSearch, sourceFilter, websiteFilter, targetGroup, sortBy, leads]);
+    return [];
+  }, [resData, leads, targetGroup, sourceFilter, websiteFilter, debouncedSearch, page, limit]);
 
-  useEffect(() => {
-    fetchServerLeads();
-  }, [fetchServerLeads]);
+  // Pagination metadata from SWR cache or computed fallback
+  const meta = useMemo(() => {
+    if (resData?.meta) {
+      return resData.meta;
+    }
+    const filtered = leads.filter((l) => {
+      if (targetGroup && l.groupId !== targetGroup && l.searchQuery !== targetGroup) return false;
+      if (sourceFilter !== "all" && l.source.toLowerCase() !== sourceFilter.toLowerCase()) return false;
+      if (websiteFilter === "no-website" && l.website) return false;
+      if (websiteFilter === "has-website" && !l.website) return false;
+      if (debouncedSearch) {
+        const s = debouncedSearch.toLowerCase();
+        return (
+          l.name.toLowerCase().includes(s) ||
+          l.phone?.toLowerCase().includes(s) ||
+          l.email?.toLowerCase().includes(s) ||
+          l.website?.toLowerCase().includes(s) ||
+          l.address?.toLowerCase().includes(s)
+        );
+      }
+      return true;
+    });
+
+    const total = filtered.length;
+    return {
+      page,
+      limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+      totalAll: leads.length,
+      noWebsiteCount: leads.filter((l) => !l.website).length,
+      hasWebsiteCount: leads.filter((l) => Boolean(l.website)).length,
+    };
+  }, [resData, leads, targetGroup, sourceFilter, websiteFilter, debouncedSearch, page, limit]);
+
+  const loading = isQueryLoading || isFetching;
 
   // Unique sources for filter dropdown
   const uniqueSources = useMemo(() => {

@@ -1,8 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { AppShell } from "@/components/layout/AppShell";
-import { mockLeads, mockSearchGroups } from "@/lib/mock-data";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -383,13 +381,7 @@ export default function SettingsDashboard({ user: initialUser }: SettingsDashboa
   };
 
   return (
-    <AppShell
-      activeTab={activeTab}
-      onTabChange={setActiveTab}
-      totalLeadsCount={mockLeads.length}
-      totalGroupsCount={mockSearchGroups.length}
-    >
-      <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6 max-w-6xl">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -942,6 +934,5 @@ export default function SettingsDashboard({ user: initialUser }: SettingsDashboa
           </div>
         )}
       </div>
-    </AppShell>
   );
 }

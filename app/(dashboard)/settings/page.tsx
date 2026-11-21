@@ -5,6 +5,5 @@ export const instant = false;
 
 export default async function SettingsPage() {
   const session = await requireAdminAuth();
-
   return <SettingsDashboard user={session.user} />;
 }

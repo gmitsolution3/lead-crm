@@ -9,12 +9,6 @@ export default async function GroupLeadsPage({
   params: Promise<{ groupId: string }>;
 }) {
   const session = await requireAdminAuth();
-  const resolvedParams = await params;
-
-  return (
-    <GroupLeadsDashboard
-      user={session.user}
-      groupId={resolvedParams.groupId}
-    />
-  );
+  const { groupId } = await params;
+  return <GroupLeadsDashboard user={session.user} groupId={groupId} />;
 }
