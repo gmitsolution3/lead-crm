@@ -1,173 +1,38 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
-import { useRouter, usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  Users,
-  Download,
-  Settings,
-  Sprout,
-  PlusCircle,
-  LogOut,
-  ShieldCheck,
-  UserCog,
-} from "lucide-react";
+import React, { useMemo } from "react";
+import { useSession } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { useSession, signOut } from "@/lib/auth-client";
-import { useFetch } from "@/hooks";
 import type { User } from "@/types";
+import { getNavSectionsForRole } from "./sidebar.config";
+import { SidebarHeader } from "./SidebarHeader";
+import { SidebarNav } from "./SidebarNav";
+import { SidebarProfile } from "./SidebarProfile";
+
+export * from "./sidebar.config";
 
 interface SidebarProps {
   user?: User | null;
-  activeTab?: string;
-  onTabChange?: (tab: string) => void;
-  totalLeadsCount?: number;
-  totalGroupsCount?: number;
   isMobile?: boolean;
   onCloseMobile?: () => void;
-  onExportLeads?: () => void;
+  className?: string;
 }
 
 export function Sidebar({
   user,
-  activeTab,
-  onTabChange,
-  totalLeadsCount,
   isMobile,
   onCloseMobile,
-  onExportLeads,
+  className,
 }: SidebarProps) {
-  const router = useRouter();
-  const pathname = usePathname();
   const { data: session } = useSession();
 
   const currentUser = user || session?.user;
   const userRole = ((currentUser as any)?.role || "user").toLowerCase();
-  const isAdmin = userRole === "admin";
 
-  // Reusable SWR hook to fetch search groups & compute leads badge automatically
-  const { data: searchGroupsData } = useFetch<any>("/search-groups");
-
-  const totalLeads = useMemo(() => {
-    if (totalLeadsCount !== undefined) return totalLeadsCount;
-    const raw = searchGroupsData?.data || searchGroupsData;
-    if (!Array.isArray(raw)) return 0;
-    return raw.reduce(
-      (acc: number, g: any) =>
-        acc + (Array.isArray(g.leads) ? g.leads.length : 0),
-      0
-    );
-  }, [totalLeadsCount, searchGroupsData]);
-
-  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-
-  const userName = currentUser?.name || (isAdmin ? "Admin Architect" : "User");
-  const userEmail = currentUser?.email || "user@gmleadgenerator.com";
-  const initials =
-    userName
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .slice(0, 2)
-      .toUpperCase() || "U";
-
-  const currentActiveTab =
-    pathname === "/users"
-      ? "users"
-      : pathname === "/settings"
-      ? "settings"
-      : pathname?.startsWith("/leads")
-      ? "leads"
-      : pathname === "/"
-      ? "overview"
-      : (activeTab || "overview");
-
-  const navItems: {
-    id: string;
-    label: string;
-    icon: React.ComponentType<{ className?: string }>;
-    badge: string | null;
-    badgeVariant?: "sage" | "default";
-  }[] = [
-    {
-      id: "overview",
-      label: "Overview",
-      icon: LayoutDashboard,
-      badge: null,
-    },
-    {
-      id: "leads",
-      label: "Leads Group",
-      icon: Users,
-      badge: totalLeads > 0 ? totalLeads.toString() : null,
-    },
-  ];
-
-  const settingsItems = useMemo(() => {
-    const items = [];
-    if (isAdmin) {
-      items.push({
-        id: "users",
-        label: "Users",
-        icon: UserCog,
-        badge: null,
-      });
-    }
-    items.push({
-      id: "settings",
-      label: "Settings",
-      icon: Settings,
-      badge: null,
-    });
-    return items;
-  }, [isAdmin]);
-
-  const handleSelect = (id: string) => {
-    if (id === "users") {
-      if (pathname !== "/users") {
-        router.push("/users");
-      }
-    } else if (id === "settings") {
-      if (pathname !== "/settings") {
-        router.push("/settings");
-      }
-    } else if (id === "leads") {
-      if (pathname !== "/leads") {
-        router.push("/leads");
-      }
-    } else if (id === "overview") {
-      if (pathname !== "/") {
-        router.push("/");
-      }
-    }
-    if (onTabChange) {
-      onTabChange(id);
-    }
-    if (isMobile && onCloseMobile) {
-      onCloseMobile();
-    }
-  };
-
-  const handleExportClick = () => {
-    if (onExportLeads) {
-      onExportLeads();
-    } else {
-      alert("Admin authorization confirmed: Exporting leads as CSV...");
-    }
-  };
-
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      router.push("/login");
-      router.refresh();
-    } catch {
-      router.push("/login");
-    }
-  };
+  const navigationSections = useMemo(
+    () => getNavSectionsForRole(userRole),
+    [userRole]
+  );
 
   return (
     <aside
@@ -175,220 +40,19 @@ export function Sidebar({
         "flex flex-col justify-between border-r border-stone-200/90 bg-[#FCFBF8] text-stone-800 shadow-[2px_0_12px_rgba(44,74,62,0.03)] z-40 select-none",
         isMobile
           ? "h-full min-h-dvh w-full overflow-y-auto"
-          : "hidden md:flex sticky top-0 h-screen md:h-dvh min-h-screen w-64 shrink-0 overflow-y-auto"
+          : "hidden md:flex sticky top-0 h-screen md:h-dvh min-h-screen w-64 shrink-0 overflow-y-auto",
+        className
       )}
     >
-      {/* Top Part: Brand + New Lead CTA + Nav */}
       <div className="flex flex-col flex-1">
-        {/* Brand Header */}
-        <div className="flex h-18 items-center gap-3 border-b border-stone-200/80 px-6 py-4 shrink-0">
-          <img
-            src="/app-icon-256x256.png"
-            alt="GM Lead Generator"
-            className="h-10 w-10 rounded-xl object-contain shadow-sm"
-          />
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-lg font-bold tracking-tight text-botanical-900">
-                GM
-              </span>
-              <span className="text-xs font-semibold uppercase tracking-wider text-terracotta-500">
-                Lead Generator
-              </span>
-            </div>
-            <p className="text-xs text-stone-500">Lead Extraction System</p>
-          </div>
-        </div>
-
-        {/* Extension Live Connection Pill */}
-        <div className="mx-4 mt-4 rounded-xl border border-sage-200/90 bg-sage-50/70 p-3 shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sage-400 opacity-75" />
-                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-botanical-600" />
-              </span>
-              <span className="text-xs font-medium text-botanical-900">
-                Extension Connected
-              </span>
-            </div>
-            <Badge variant="sage" className="px-1.5 py-0 text-[10px]">
-              v2.4
-            </Badge>
-          </div>
-          <p className="mt-1 text-[11px] leading-tight text-stone-500">
-            Syncing leads from active browser scraping session
-          </p>
-        </div>
-
-        {/* Main Navigation */}
-        <div className="mt-5 px-3">
-          <div className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
-            Main Workspace
-          </div>
-          <nav className="space-y-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = currentActiveTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => handleSelect(item.id)}
-                  className={cn(
-                    "group flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer",
-                    isActive
-                      ? "bg-botanical-700 text-paper shadow-sm"
-                      : "text-stone-700 hover:bg-oatmeal-200/70 hover:text-botanical-900"
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <Icon
-                      className={cn(
-                        "h-4.5 w-4.5 transition-colors",
-                        isActive
-                          ? "text-sage-200"
-                          : "text-stone-400 group-hover:text-botanical-700"
-                      )}
-                    />
-                    <span>{item.label}</span>
-                  </div>
-                  {item.badge && (
-                    <span
-                      className={cn(
-                        "rounded-full px-2 py-0.5 text-xs font-semibold",
-                        isActive
-                          ? "bg-botanical-800 text-sage-200"
-                          : item.badgeVariant === "sage"
-                          ? "bg-sage-100 text-botanical-800"
-                          : "bg-oatmeal-200 text-stone-600 group-hover:bg-oatmeal-300"
-                      )}
-                    >
-                      {item.badge}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </nav>
-
-          {/* Secondary Navigation (Admin Tools) */}
-          {isAdmin && (
-            <>
-              <div className="mt-6 px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
-                Admin Tools
-              </div>
-              <div className="space-y-1">
-                <button
-                  onClick={handleExportClick}
-                  className="group flex w-full items-center justify-between rounded-xl px-3.5 py-2 text-sm font-medium text-stone-700 transition-all hover:bg-oatmeal-200/70 hover:text-botanical-900 cursor-pointer"
-                >
-                  <div className="flex items-center gap-3">
-                    <Download className="h-4.5 w-4.5 text-stone-400 group-hover:text-botanical-700" />
-                    <span>Data Export</span>
-                  </div>
-                  <span className="text-xs text-stone-400">CSV/JSON</span>
-                </button>
-              </div>
-            </>
-          )}
-
-          {/* Settings Group */}
-          <div className="mt-6 px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
-            Settings
-          </div>
-          <div className="space-y-1">
-            {settingsItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = currentActiveTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => handleSelect(item.id)}
-                  className={cn(
-                    "group flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer",
-                    isActive
-                      ? "bg-botanical-700 text-paper shadow-sm"
-                      : "text-stone-700 hover:bg-oatmeal-200/70 hover:text-botanical-900"
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <Icon
-                      className={cn(
-                        "h-4.5 w-4.5 transition-colors",
-                        isActive
-                          ? "text-sage-200"
-                          : "text-stone-400 group-hover:text-botanical-700"
-                      )}
-                    />
-                    <span>{item.label}</span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <SidebarHeader />
+        <SidebarNav
+          sections={navigationSections}
+          onCloseMobile={isMobile ? onCloseMobile : undefined}
+        />
       </div>
 
-      {/* Bottom Profile Section with Clean User Card */}
-      <div className="border-t border-stone-200/80 p-3 mt-auto shrink-0 bg-[#FCFBF8] relative">
-        {profileMenuOpen && (
-          <div className="absolute bottom-full left-3 right-3 mb-2 rounded-2xl border border-stone-200 bg-[#FCFBF8] p-3 shadow-xl z-50 animate-in fade-in slide-in-from-bottom-2 duration-150">
-            <div className="pb-2.5 mb-2 border-b border-stone-200/70">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">
-                  Logged In As
-                </span>
-                <Badge
-                  variant={isAdmin ? "terracotta" : "sage"}
-                  className="text-[10px] uppercase font-bold"
-                >
-                  {userRole}
-                </Badge>
-              </div>
-              <p className="text-xs font-bold text-botanical-900 truncate">{userName}</p>
-              <p className="text-[11px] text-stone-500 truncate">{userEmail}</p>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleSignOut}
-              className="w-full flex items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-medium text-terracotta-700 hover:bg-terracotta-50 transition-colors cursor-pointer"
-            >
-              <LogOut className="h-4 w-4" />
-              <span>Sign Out</span>
-            </button>
-          </div>
-        )}
-
-        <div
-          onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-          className="flex items-center gap-3 rounded-xl bg-oatmeal-100/90 p-2.5 transition-colors cursor-pointer hover:bg-oatmeal-200/90"
-        >
-          {currentUser?.image ? (
-            <img
-              src={currentUser.image}
-              alt={userName}
-              className="h-9 w-9 rounded-lg object-cover shadow-xs border border-stone-200/80"
-            />
-          ) : (
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-botanical-700 text-paper font-bold text-sm shadow-xs">
-              {initials}
-            </div>
-          )}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5">
-              <p className="truncate text-xs font-semibold text-botanical-900">
-                {userName}
-              </p>
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
-            </div>
-            <p className="truncate text-[11px] text-stone-500 capitalize">
-              {userRole}
-            </p>
-          </div>
-          <Settings className="h-4 w-4 text-stone-400 hover:text-botanical-800" />
-        </div>
-      </div>
+      <SidebarProfile user={currentUser} role={userRole} />
     </aside>
   );
 }
