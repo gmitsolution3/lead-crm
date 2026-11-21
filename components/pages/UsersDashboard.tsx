@@ -2,15 +2,10 @@
 
 import React from "react";
 import { UserManagementSystem } from "@/components/features/admin/UserManagementSystem";
+import type { User } from "@/types";
 
 interface UsersDashboardProps {
-  user?: {
-    id: string;
-    name: string;
-    email: string;
-    role?: string;
-    phone?: string;
-  };
+  user?: User | null;
 }
 
 export default function UsersDashboard({ user }: UsersDashboardProps) {

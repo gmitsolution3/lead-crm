@@ -8,6 +8,6 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await requireAdminAuth();
-  return <DashboardShell>{children}</DashboardShell>;
+  const session = await requireAdminAuth();
+  return <DashboardShell user={session.user}>{children}</DashboardShell>;
 }

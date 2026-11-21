@@ -7,11 +7,13 @@ import { Header } from "./Header";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { LeadDetailSheet } from "@/components/features/leads/LeadDetailSheet";
 import { useDashboard } from "@/context";
+import type { User } from "@/types";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2 } from "lucide-react";
 
 interface AppShellProps {
   children: React.ReactNode;
+  user?: User | null;
   activeTab?: string;
   onTabChange?: (tab: string) => void;
   totalLeadsCount?: number;

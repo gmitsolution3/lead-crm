@@ -5,17 +5,11 @@ import { useRouter } from "next/navigation";
 import { LeadTable } from "@/components/features/leads/LeadTable";
 import { SearchGroupGrid } from "@/components/features/search-groups/SearchGroupGrid";
 import { useDashboard } from "@/context";
+import type { User } from "@/types";
 import { FolderKanban, Users, Sparkles } from "lucide-react";
 
 interface LeadsDashboardProps {
-  user?: {
-    id: string;
-    name: string;
-    email: string;
-    role?: string;
-    phone?: string;
-    image?: string | null;
-  };
+  user?: User | null;
 }
 
 export default function LeadsDashboard({ user }: LeadsDashboardProps) {

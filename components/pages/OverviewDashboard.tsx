@@ -6,6 +6,7 @@ import { LeadMetricCards } from "@/components/features/leads/LeadMetricCards";
 import { RecentActivityFeed } from "@/components/features/leads/RecentActivityFeed";
 import { LeadTable } from "@/components/features/leads/LeadTable";
 import { useDashboard } from "@/context";
+import type { User } from "@/types";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,14 +16,7 @@ import {
 } from "lucide-react";
 
 interface OverviewDashboardProps {
-  user?: {
-    id: string;
-    name: string;
-    email: string;
-    role?: string;
-    phone?: string;
-    image?: string | null;
-  };
+  user?: User | null;
 }
 
 export default function OverviewDashboard({ user }: OverviewDashboardProps) {

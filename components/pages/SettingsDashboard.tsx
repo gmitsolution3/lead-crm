@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { useSession } from "@/lib/auth-client";
 import {
   Settings,
-  User,
+  User as UserIcon,
   Shield,
   Key,
   Database,
@@ -32,17 +32,10 @@ import {
   Phone,
   Laptop,
 } from "lucide-react";
+import type { User } from "@/types";
 
 interface SettingsDashboardProps {
-  user?: {
-    id: string;
-    name: string;
-    email: string;
-    role?: string;
-    phone?: string;
-    image?: string;
-    imagePublicId?: string;
-  };
+  user?: User | null;
 }
 
 interface UserProfileData {
@@ -406,7 +399,7 @@ export default function SettingsDashboard({ user: initialUser }: SettingsDashboa
         {/* Section Navigation Tabs */}
         <div className="flex items-center gap-2 border-b border-stone-200/90 pb-3 overflow-x-auto">
           {[
-            { id: "profile", label: "My Profile & Cloudinary Avatar", icon: User },
+            { id: "profile", label: "My Profile & Cloudinary Avatar", icon: UserIcon },
             { id: "workspace", label: "Extension & Crawler Keys", icon: Key },
             { id: "security", label: "Security Policies & Roles", icon: Shield },
           ].map((tab) => {
@@ -580,7 +573,7 @@ export default function SettingsDashboard({ user: initialUser }: SettingsDashboa
               <Card className="p-6 border-stone-200 bg-[#FCFBF8] shadow-sm">
                 <CardHeader className="p-0 pb-4">
                   <CardTitle className="text-base font-bold text-botanical-900 flex items-center gap-2">
-                    <User className="h-4.5 w-4.5 text-botanical-700" />
+                    <UserIcon className="h-4.5 w-4.5 text-botanical-700" />
                     <span>Personal Information</span>
                   </CardTitle>
                   <p className="text-xs text-stone-500">

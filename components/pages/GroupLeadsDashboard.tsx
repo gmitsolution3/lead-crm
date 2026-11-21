@@ -4,19 +4,13 @@ import React, { useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { LeadTable } from "@/components/features/leads/LeadTable";
 import { useDashboard } from "@/context";
+import type { User } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Download, AlertCircle, Sparkles } from "lucide-react";
 
 interface GroupLeadsDashboardProps {
-  user?: {
-    id: string;
-    name: string;
-    email: string;
-    role?: string;
-    phone?: string;
-    image?: string | null;
-  };
+  user?: User | null;
   groupId: string;
 }
 
