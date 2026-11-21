@@ -1,6 +1,7 @@
 "use client";
 
 import { LeadDetailSheet } from "@/components/features/leads/LeadDetailSheet";
+import { LeadTableSkeletonRows } from "@/components/features/leads/LeadTableSkeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   FacebookIcon,
   InstagramIcon,
@@ -17,6 +19,13 @@ import {
 } from "@/components/ui/icons";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -37,12 +46,15 @@ import {
   Download,
   ExternalLink,
   Filter,
+  FilterX,
   Globe,
   Loader2,
   Mail,
   Phone,
+  RotateCcw,
   Search,
-  Sparkles,
+  Target,
+  Users,
 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -179,6 +191,22 @@ export default function LeadsDashboard({
   }, [leadsRes, page, limit, leads.length, group]);
 
   const loading = isLeadsLoading || isFetching || groupLoading;
+
+  const hasActiveFilters = Boolean(
+    sourceFilter !== "all" ||
+    websiteFilter !== "all" ||
+    debouncedSearch ||
+    tableSearch ||
+    sortBy !== "default"
+  );
+
+  const handleResetFilters = useCallback(() => {
+    setSourceFilter("all");
+    setWebsiteFilter("all");
+    setTableSearch("");
+    setSortBy("default");
+    setPage(1);
+  }, []);
 
   // Reusable SWR mutation for remark saving with automatic cache invalidation
   const { mutateAsync: patchLeadRemark } = usePatch("/leads", {
@@ -379,7 +407,7 @@ export default function LeadsDashboard({
                 className="text-[10px] gap-1 font-semibold bg-terracotta-100 text-terracotta-800 border-terracotta-200"
                 title={`${potentialCount} businesses in this group without a website`}
               >
-                <Sparkles className="h-2.5 w-2.5 text-terracotta-600" />
+                <Target className="h-2.5 w-2.5 text-terracotta-600" />
                 {potentialCount} Potential{" "}
                 {potentialCount === 1 ? "Client" : "Clients"} (No
                 Website)
@@ -417,210 +445,33 @@ export default function LeadsDashboard({
       {/* Leads Table Controls & Content */}
       <div className="space-y-4">
         {/* Table Toolbar */}
-        <div className="flex flex-col gap-3 rounded-2xl border border-stone-200/90 bg-[#FCFBF8] p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-1 flex-wrap items-center gap-2.5">
-            {/* Backend-driven Search */}
-            <div className="relative w-full max-w-xs">
-              <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-stone-400" />
-              <Input
-                value={tableSearch}
-                onChange={(e) => setTableSearch(e.target.value)}
-                placeholder="Search leads in this group..."
-                className="h-9 pl-8 text-xs bg-oatmeal-100/60 border-stone-200"
-              />
+        <div className="rounded-2xl border border-stone-200/90 bg-[#FCFBF8] p-4 sm:p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-4">
+          {/* Top Row: Search Input and Status Counter */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="w-full sm:max-w-md">
+              <label className="block text-[10px] font-semibold uppercase tracking-wider text-stone-400 mb-1">
+                Search Leads
+              </label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-stone-400" />
+                <Input
+                  value={tableSearch}
+                  onChange={(e) => setTableSearch(e.target.value)}
+                  placeholder="Search by business name, phone, email, or address..."
+                  className="h-9 pl-8 text-xs bg-oatmeal-100/60 border-stone-200"
+                />
+              </div>
             </div>
 
-            {/* Quick Filter: All vs Potential Clients (No Website) */}
-            <div className="flex items-center rounded-xl bg-oatmeal-200/70 p-1 border border-stone-200/80">
-              <button
-                type="button"
-                onClick={() => {
-                  setWebsiteFilter("all");
-                  setPage(1);
-                }}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-                  websiteFilter === "all"
-                    ? "bg-paper text-botanical-900 shadow-xs"
-                    : "text-stone-600 hover:text-botanical-900"
-                }`}
-              >
-                All ({meta.totalAll ?? meta.total})
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setWebsiteFilter("no-website");
-                  setPage(1);
-                }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-                  websiteFilter === "no-website"
-                    ? "bg-terracotta-100 text-terracotta-900 shadow-xs border border-terracotta-300"
-                    : "text-terracotta-700 hover:bg-terracotta-50/80"
-                }`}
-                title="Leads without website are prime potential clients"
-              >
-                <Sparkles className="h-3 w-3 text-terracotta-600" />
-                <span>
-                  Potential Clients ({meta.noWebsiteCount ?? 0})
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setWebsiteFilter("has-website");
-                  setPage(1);
-                }}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-                  websiteFilter === "has-website"
-                    ? "bg-paper text-botanical-900 shadow-xs"
-                    : "text-stone-600 hover:text-botanical-900"
-                }`}
-              >
-                With Website ({meta.hasWebsiteCount ?? 0})
-              </button>
-            </div>
-
-            {/* Source filter */}
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-9 gap-1.5 text-xs text-stone-700 border-stone-200 cursor-pointer"
-                  />
-                }
-              >
-                <Filter className="h-3.5 w-3.5 text-botanical-700" />
-                <span>
-                  Source:{" "}
-                  {sourceFilter === "all" ? "All" : sourceFilter}
-                </span>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-44">
-                <DropdownMenuItem
-                  onClick={() => {
-                    setSourceFilter("all");
-                    setPage(1);
-                  }}
-                >
-                  All Sources
-                </DropdownMenuItem>
-                {uniqueSources.map((source) => (
-                  <DropdownMenuItem
-                    key={source}
-                    onClick={() => {
-                      setSourceFilter(source);
-                      setPage(1);
-                    }}
-                  >
-                    {source}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* Sort order */}
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-9 gap-1.5 text-xs text-stone-700 border-stone-200 cursor-pointer"
-                  />
-                }
-              >
-                <ArrowUpDown className="h-3.5 w-3.5 text-botanical-700" />
-                <span>
-                  Sort:{" "}
-                  {sortBy === "default"
-                    ? "Default (Source Priority)"
-                    : sortBy === "newest"
-                      ? "Newest"
-                      : sortBy === "oldest"
-                        ? "Oldest"
-                        : sortBy === "name_asc"
-                          ? "Name (A-Z)"
-                          : "Name (Z-A)"}
-                </span>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-48">
-                <DropdownMenuItem
-                  onClick={() => {
-                    setSortBy("default");
-                    setPage(1);
-                  }}
-                >
-                  Default (Source Priority)
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    setSortBy("newest");
-                    setPage(1);
-                  }}
-                >
-                  Newest First
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    setSortBy("oldest");
-                    setPage(1);
-                  }}
-                >
-                  Oldest First
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    setSortBy("name_asc");
-                    setPage(1);
-                  }}
-                >
-                  Name (A-Z)
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    setSortBy("name_desc");
-                    setPage(1);
-                  }}
-                >
-                  Name (Z-A)
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* Reset button if filtered */}
-            {(sourceFilter !== "all" ||
-              websiteFilter !== "all" ||
-              tableSearch ||
-              sortBy !== "default") && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setSourceFilter("all");
-                  setWebsiteFilter("all");
-                  setTableSearch("");
-                  setSortBy("default");
-                  setPage(1);
-                }}
-                className="h-9 text-xs text-stone-500 hover:text-stone-800 cursor-pointer"
-              >
-                Reset Filters
-              </Button>
-            )}
-          </div>
-
-          {/* Right side actions: Count & Export */}
-          <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-stone-200">
-            <span className="text-xs font-medium text-stone-500">
+            {/* Status counter indicator */}
+            <div className="flex items-center gap-2 text-xs font-medium text-stone-500 self-end sm:self-auto pt-2 sm:pt-4">
               {loading ? (
                 <span className="flex items-center gap-1.5 text-sage-600">
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  <span>Loading...</span>
+                  <span>Loading leads...</span>
                 </span>
               ) : (
-                <>
+                <span>
                   Showing{" "}
                   <strong className="text-botanical-900">
                     {meta.total === 0
@@ -629,9 +480,149 @@ export default function LeadsDashboard({
                     -{Math.min(meta.page * meta.limit, meta.total)}
                   </strong>{" "}
                   of {meta.total} leads
-                </>
+                </span>
               )}
-            </span>
+            </div>
+          </div>
+
+          {/* Bottom Row: Labeled Filters */}
+          <div className="flex flex-wrap items-end gap-3 pt-3 border-t border-stone-200/70">
+            {/* 1. Website Status / Opportunity Quick Tabs */}
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">
+                Website Opportunity
+              </label>
+              <div className="flex items-center rounded-xl bg-oatmeal-200/70 p-1 border border-stone-200/80">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWebsiteFilter("all");
+                    setPage(1);
+                  }}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                    websiteFilter === "all"
+                      ? "bg-paper text-botanical-900 shadow-xs"
+                      : "text-stone-600 hover:text-botanical-900"
+                  }`}
+                >
+                  All ({meta.totalAll ?? meta.total})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWebsiteFilter("no-website");
+                    setPage(1);
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                    websiteFilter === "no-website"
+                      ? "bg-terracotta-100 text-terracotta-900 shadow-xs border border-terracotta-300"
+                      : "text-terracotta-700 hover:bg-terracotta-50/80"
+                  }`}
+                  title="Businesses without a website are prime potential clients"
+                >
+                  <Target className="h-3.5 w-3.5 text-terracotta-600" />
+                  <span>
+                    Potential Clients ({meta.noWebsiteCount ?? 0})
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWebsiteFilter("has-website");
+                    setPage(1);
+                  }}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                    websiteFilter === "has-website"
+                      ? "bg-paper text-botanical-900 shadow-xs"
+                      : "text-stone-600 hover:text-botanical-900"
+                  }`}
+                >
+                  With Website ({meta.hasWebsiteCount ?? 0})
+                </button>
+              </div>
+            </div>
+
+            {/* 2. Platform Source Filter */}
+            <div className="flex flex-col gap-1 w-full sm:w-auto min-w-[180px]">
+              <label className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">
+                Platform Source
+              </label>
+              <Select
+                value={sourceFilter}
+                onValueChange={(val) => {
+                  setSourceFilter(val || "all");
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="h-9 text-xs bg-oatmeal-100/60 border-stone-200 text-stone-700 rounded-xl">
+                  <div className="flex items-center gap-1.5">
+                    <Filter className="h-3 w-3 text-botanical-700 shrink-0" />
+                    <SelectValue placeholder="Lead Source" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Source: All Platforms</SelectItem>
+                  {uniqueSources.map((source) => (
+                    <SelectItem key={source} value={source}>
+                      {source}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* 3. Sort Order */}
+            <div className="flex flex-col gap-1 w-full sm:w-auto min-w-[210px]">
+              <label className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">
+                Sort Order
+              </label>
+              <Select
+                value={sortBy}
+                onValueChange={(val) => {
+                  setSortBy(val || "default");
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="h-9 text-xs bg-oatmeal-100/60 border-stone-200 text-stone-700 rounded-xl">
+                  <div className="flex items-center gap-1.5">
+                    <ArrowUpDown className="h-3 w-3 text-stone-500 shrink-0" />
+                    <SelectValue placeholder="Sort Order" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">
+                    Default (Source Priority)
+                  </SelectItem>
+                  <SelectItem value="newest">
+                    Newest Captured First
+                  </SelectItem>
+                  <SelectItem value="oldest">
+                    Oldest Captured First
+                  </SelectItem>
+                  <SelectItem value="name_asc">
+                    Business Name (A - Z)
+                  </SelectItem>
+                  <SelectItem value="name_desc">
+                    Business Name (Z - A)
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Reset button if filtered */}
+            {hasActiveFilters && (
+              <div className="ml-auto pb-0.5">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleResetFilters}
+                  className="h-9 text-xs text-stone-500 hover:text-stone-800 gap-1.5 cursor-pointer"
+                >
+                  <RotateCcw className="h-3.5 w-3.5 text-stone-400" />
+                  <span>Reset Filters</span>
+                </Button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -665,28 +656,34 @@ export default function LeadsDashboard({
             </TableHeader>
             <TableBody>
               {loading && leads.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="h-44 text-center">
-                    <div className="flex flex-col items-center justify-center text-stone-500 gap-2">
-                      <Loader2 className="h-6 w-6 animate-spin text-botanical-700" />
-                      <p className="text-sm font-semibold text-botanical-900">
-                        Loading leads from database...
-                      </p>
-                    </div>
-                  </TableCell>
-                </TableRow>
+                <LeadTableSkeletonRows rows={limit > 10 ? 10 : limit} />
               ) : leads.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-44 text-center">
-                    <div className="flex flex-col items-center justify-center text-stone-500">
-                      <p className="text-base font-semibold text-botanical-900">
-                        No leads found in this group
-                      </p>
-                      <p className="text-xs text-stone-400 mt-1">
-                        Try adjusting your search filter or capturing
-                        more leads from the browser extension.
-                      </p>
-                    </div>
+                  <TableCell colSpan={7} className="p-8 sm:p-12 text-center">
+                    <EmptyState
+                      compact
+                      icon={hasActiveFilters ? FilterX : Users}
+                      title={
+                        hasActiveFilters
+                          ? "No Leads Match the Selected Filters"
+                          : "No Leads Captured in This Group"
+                      }
+                      description={
+                        hasActiveFilters
+                          ? "Try clearing or relaxing your search query and filters to see more results."
+                          : "Capture leads from Google Maps or other sources using the browser extension to populate this group."
+                      }
+                      action={
+                        hasActiveFilters
+                          ? {
+                              label: "Reset All Filters",
+                              onClick: handleResetFilters,
+                              icon: RotateCcw,
+                            }
+                          : undefined
+                      }
+                      className="border-0 bg-transparent p-0"
+                    />
                   </TableCell>
                 </TableRow>
               ) : (
@@ -779,7 +776,7 @@ export default function LeadsDashboard({
                         ) : (
                           <div className="flex flex-col items-start gap-0.5">
                             <span className="inline-flex items-center gap-1 rounded-full bg-terracotta-100/90 border border-terracotta-300/80 px-2.5 py-0.5 text-[10px] font-semibold text-terracotta-800 shadow-2xs whitespace-nowrap">
-                              <Sparkles className="h-2.5 w-2.5 text-terracotta-600 shrink-0" />
+                              <Target className="h-2.5 w-2.5 text-terracotta-600 shrink-0" />
                               Potential Client
                             </span>
                             <span className="text-[10px] text-stone-400 italic pl-1">

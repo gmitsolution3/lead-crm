@@ -5,7 +5,7 @@ import {
   FolderKanban,
   Users,
   ArrowRight,
-  Sparkles,
+  Target,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -56,7 +56,7 @@ export function SearchGroupCard({
                 className="gap-1 font-semibold text-xs bg-terracotta-100 text-terracotta-800 border-terracotta-200"
                 title={`${potentialCount} businesses without a website (high-conversion potential clients)`}
               >
-                <Sparkles className="h-2.5 w-2.5 text-terracotta-600" />
+                <Target className="h-2.5 w-2.5 text-terracotta-600" />
                 {potentialCount} potential
               </Badge>
             )}

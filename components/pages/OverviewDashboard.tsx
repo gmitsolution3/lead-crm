@@ -25,7 +25,7 @@ import {
   Sprout,
   PieChart,
   CheckCircle2,
-  Sparkles,
+  Target,
   Globe,
   Mail,
   Phone,
@@ -460,7 +460,7 @@ export default function OverviewDashboard({ user }: OverviewDashboardProps) {
                           </a>
                         ) : (
                           <span className="inline-flex items-center gap-1 rounded-full bg-terracotta-100/90 border border-terracotta-300/80 px-2 py-0.5 text-[10px] font-semibold text-terracotta-800">
-                            <Sparkles className="h-2.5 w-2.5 text-terracotta-600 shrink-0" />
+                            <Target className="h-2.5 w-2.5 text-terracotta-600 shrink-0" />
                             Potential Client
                           </span>
                         )}

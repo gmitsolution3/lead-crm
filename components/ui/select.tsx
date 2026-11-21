@@ -62,7 +62,7 @@ function SelectContent({
   sideOffset = 4,
   align = "start",
   alignOffset = 0,
-  alignItemWithTrigger = true,
+  alignItemWithTrigger = false,
   ...props
 }: SelectPrimitive.Popup.Props &
   Pick<
@@ -83,7 +83,7 @@ function SelectContent({
           data-slot="select-content"
           data-align-trigger={alignItemWithTrigger}
           className={cn(
-            "relative isolate z-50 max-h-(--available-height) w-(--anchor-width) min-w-36 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-xl bg-[#FCFBF8] p-1.5 text-stone-800 shadow-xl border border-stone-200/90 duration-100 font-sans data-[align-trigger=true]:animate-none data-[side=bottom]:slide-in-from-top-1 data-[side=top]:slide-in-from-bottom-1 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 dark:bg-stone-900 dark:border-stone-800 dark:text-stone-100",
+            "relative isolate z-50 max-h-(--available-height) min-w-(--anchor-width) w-max max-w-[min(calc(100vw-2rem),26rem)] origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-xl bg-[#FCFBF8] p-1.5 text-stone-800 shadow-xl border border-stone-200/90 duration-100 font-sans data-[align-trigger=true]:animate-none data-[side=bottom]:slide-in-from-top-1 data-[side=top]:slide-in-from-bottom-1 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 dark:bg-stone-900 dark:border-stone-800 dark:text-stone-100",
             className
           )}
           {...props}

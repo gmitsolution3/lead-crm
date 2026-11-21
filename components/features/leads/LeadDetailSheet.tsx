@@ -22,7 +22,7 @@ import {
   Layers,
   FileText,
   Bookmark,
-  Sparkles,
+  Target,
 } from "lucide-react";
 import {
   FacebookIcon,
@@ -103,7 +103,7 @@ export function LeadDetailSheet({
                 variant="terracotta"
                 className="text-xs px-2.5 py-0.5 rounded-full font-semibold gap-1 bg-terracotta-100 text-terracotta-800 border-terracotta-300 shadow-2xs"
               >
-                <Sparkles className="h-3 w-3 text-terracotta-600" />
+                <Target className="h-3.5 w-3.5 text-terracotta-600" />
                 Potential Client • No Website
               </Badge>
             )}
@@ -136,7 +136,7 @@ export function LeadDetailSheet({
             <div className="rounded-2xl border border-terracotta-300/80 bg-terracotta-50/70 p-4 shadow-sm">
               <div className="flex items-start gap-3">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-terracotta-100 text-terracotta-700 border border-terracotta-200">
-                  <Sparkles className="h-4.5 w-4.5 text-terracotta-600" />
+                  <Target className="h-4.5 w-4.5 text-terracotta-600" />
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">

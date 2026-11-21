@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Users, FolderKanban, Percent, TrendingUp, Sparkles } from "lucide-react";
+import { Users, FolderKanban, Percent, TrendingUp, Target } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
 interface LeadMetricCardsProps {
@@ -44,7 +44,7 @@ export function LeadMetricCards({
                 ? `${Math.round(((potentialClients || 0) / (totalLeads || 1)) * 100)}% of leads`
                 : undefined,
             isPotential: true,
-            icon: Sparkles,
+            icon: Target,
             accentColor: "text-terracotta-700",
             bgAccent: "bg-terracotta-100",
             borderAccent: "border-b-4 border-b-terracotta-500",
@@ -138,7 +138,7 @@ export function LeadMetricCards({
                         }`}
                       >
                         {metric.isPotential ? (
-                          <Sparkles className="mr-1 h-3 w-3 text-terracotta-600" />
+                          <Target className="mr-1 h-3 w-3 text-terracotta-600" />
                         ) : (
                           <TrendingUp className="mr-0.5 h-3 w-3" />
                         )}
