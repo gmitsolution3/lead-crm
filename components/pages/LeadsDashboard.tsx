@@ -354,7 +354,7 @@ export default function LeadsDashboard({
       </AnimatePresence>
 
       {/* Navigation & Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 pt-1">
         <div>
           <Button
             variant="ghost"
@@ -640,23 +640,25 @@ export default function LeadsDashboard({
           <Table>
             <TableHeader>
               <TableRow className="border-b border-stone-200 bg-oatmeal-200/60 hover:bg-oatmeal-200/60">
-                <TableHead className="w-[260px]">
+                <TableHead className="w-[260px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
                   Lead / Business Name
                 </TableHead>
-                <TableHead className="w-[200px]">
+                <TableHead className="w-[200px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
                   Contact Info
                 </TableHead>
-                <TableHead className="w-[180px]">
+                <TableHead className="w-[180px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
                   Website / Status
                 </TableHead>
-                <TableHead className="w-[130px]">Source</TableHead>
-                <TableHead className="w-[200px]">
+                <TableHead className="w-[130px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
+                  Source
+                </TableHead>
+                <TableHead className="w-[200px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
                   Search Query
                 </TableHead>
-                <TableHead className="w-[140px] text-center">
+                <TableHead className="w-[140px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600 text-center">
                   Social Links
                 </TableHead>
-                <TableHead className="w-[90px] text-right">
+                <TableHead className="w-[90px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600 text-right">
                   Added
                 </TableHead>
               </TableRow>
@@ -699,7 +701,7 @@ export default function LeadsDashboard({
                       } hover:bg-sage-100/50`}
                     >
                       {/* Name Column */}
-                      <TableCell className="font-medium">
+                      <TableCell className="px-4 py-3.5 font-medium">
                         <div className="flex items-center gap-3">
                           <div
                             className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl font-bold text-sm shadow-sm ${
@@ -722,7 +724,7 @@ export default function LeadsDashboard({
                       </TableCell>
 
                       {/* Contact Stack (Email / Phone) */}
-                      <TableCell>
+                      <TableCell className="px-4 py-3.5">
                         <div className="flex flex-col space-y-1 text-xs">
                           {lead.email ? (
                             <div className="flex items-center gap-1.5 text-stone-700 font-medium truncate max-w-[200px]">
@@ -751,7 +753,7 @@ export default function LeadsDashboard({
                       </TableCell>
 
                       {/* Website / Opportunity Status */}
-                      <TableCell>
+                      <TableCell className="px-4 py-3.5">
                         {lead.website ? (
                           <a
                             href={
@@ -788,19 +790,19 @@ export default function LeadsDashboard({
                       </TableCell>
 
                       {/* Source Badge */}
-                      <TableCell>
+                      <TableCell className="px-4 py-3.5">
                         {getSourceBadge(lead.source)}
                       </TableCell>
 
                       {/* Search Query */}
-                      <TableCell>
+                      <TableCell className="px-4 py-3.5">
                         <span className="inline-block max-w-[200px] truncate text-xs text-stone-600 rounded-md bg-oatmeal-200/60 px-2 py-1">
                           {lead.searchQuery}
                         </span>
                       </TableCell>
 
                       {/* Social Links */}
-                      <TableCell>
+                      <TableCell className="px-4 py-3.5">
                         <div
                           className="flex items-center justify-center gap-1.5"
                           onClick={(e) => e.stopPropagation()}
@@ -876,7 +878,7 @@ export default function LeadsDashboard({
                       </TableCell>
 
                       {/* Date */}
-                      <TableCell className="text-right text-xs text-stone-400">
+                      <TableCell className="px-4 py-3.5 text-right text-xs text-stone-400">
                         {formatDate(lead.createdAt)}
                       </TableCell>
                     </TableRow>
