@@ -13,9 +13,11 @@ import {
   Calendar,
   Layers,
   Target,
+  Plus,
 } from "lucide-react";
 import { SearchGroupCard } from "@/components/features/search-groups/SearchGroupCard";
 import { SearchGroupSkeletonGrid } from "@/components/features/search-groups/SearchGroupSkeleton";
+import { LeadFormModal } from "@/components/features/leads/LeadFormModal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -77,6 +79,8 @@ export default function LeadsGroupDashboard({
   const [sizeFilter, setSizeFilter] = useState(initialSize);
   const [dateRange, setDateRange] = useState(initialDateRange);
   const [sortBy, setSortBy] = useState(initialSortBy);
+  const [groupForAddLead, setGroupForAddLead] = useState<SearchGroup | null>(null);
+  const [isGlobalAddLeadOpen, setIsGlobalAddLeadOpen] = useState(false);
 
   // Debounce search query so backend isn't spammed while typing
   useEffect(() => {
@@ -139,6 +143,7 @@ export default function LeadsGroupDashboard({
     data: resData,
     isLoading,
     isFetching,
+    refetch,
   } = useFetch<any>("/search-groups", queryParams);
 
   const groups: SearchGroup[] = useMemo(() => {
@@ -205,7 +210,7 @@ export default function LeadsGroupDashboard({
             </Badge>
           </div>
           <h1 className="text-3xl font-bold tracking-tight text-botanical-900">
-            Leads Groups
+            Lead Directory
           </h1>
           <p className="mt-1 text-sm text-stone-600">
             Browse and manage lead extraction groups captured by your
@@ -213,8 +218,17 @@ export default function LeadsGroupDashboard({
           </p>
         </div>
 
-        {/* Quick Badges */}
+        {/* Actions & Badges */}
         <div className="flex flex-wrap items-center gap-3 self-start sm:self-auto">
+          <Button
+            size="sm"
+            onClick={() => setIsGlobalAddLeadOpen(true)}
+            className="text-xs h-9 bg-botanical-800 hover:bg-botanical-900 text-paper gap-1.5 cursor-pointer rounded-xl shadow-xs font-semibold"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span>Add Lead</span>
+          </Button>
+
           {potentialClientsCount > 0 && (
             <span
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-terracotta-100 text-terracotta-900 border border-terracotta-200/90 shadow-2xs"
@@ -478,6 +492,7 @@ export default function LeadsGroupDashboard({
                   leadCount={count}
                   potentialCount={potentialCount}
                   onFilterByGroup={handleSelectGroup}
+                  onAddLead={(grp) => setGroupForAddLead(grp)}
                 />
               </motion.div>
             );
@@ -501,6 +516,20 @@ export default function LeadsGroupDashboard({
         itemLabel="groups"
         variant="range"
         hideOnSinglePage={true}
+      />
+
+      {/* Add Single Lead Manually Modal */}
+      <LeadFormModal
+        isOpen={isGlobalAddLeadOpen || !!groupForAddLead}
+        onClose={() => {
+          setIsGlobalAddLeadOpen(false);
+          setGroupForAddLead(null);
+        }}
+        targetGroup={groupForAddLead}
+        searchGroups={groups}
+        onSuccess={() => {
+          refetch();
+        }}
       />
     </div>
   );

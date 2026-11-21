@@ -38,6 +38,7 @@ import { useFetch, usePatch } from "@/hooks";
 import { formatDate } from "@/lib/utils";
 import type { User } from "@/types";
 import { Lead, SearchGroup } from "@/types";
+import { LeadFormModal } from "@/components/features/leads/LeadFormModal";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -51,6 +52,7 @@ import {
   Loader2,
   Mail,
   Phone,
+  Plus,
   RotateCcw,
   Search,
   Target,
@@ -72,11 +74,14 @@ export default function LeadsDashboard({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const decodedId = decodeURIComponent(groupId || "");
+  const [isAddLeadOpen, setIsAddLeadOpen] = useState(false);
 
   // 1. Fetch search group metadata & DB-computed metrics
-  const { data: groupRes, isLoading: groupLoading } = useFetch<any>(
-    `/search-groups/${encodeURIComponent(decodedId)}`,
-  );
+  const {
+    data: groupRes,
+    isLoading: groupLoading,
+    refetch: refetchGroup,
+  } = useFetch<any>(`/search-groups/${encodeURIComponent(decodedId)}`);
 
   const group: SearchGroup | null = useMemo(() => {
     return groupRes?.data || groupRes || null;
@@ -164,6 +169,7 @@ export default function LeadsDashboard({
     data: leadsRes,
     isLoading: isLeadsLoading,
     isFetching,
+    refetch: refetchLeads,
   } = useFetch<any>("/leads", queryParams);
 
   const leads: Lead[] = useMemo(() => {
@@ -391,7 +397,7 @@ export default function LeadsDashboard({
             className="-ml-2 mb-2 text-xs text-stone-600 hover:text-botanical-900 hover:bg-oatmeal-200/60 gap-1.5 cursor-pointer"
           >
             <ArrowLeft className="h-4 w-4" />
-            <span>Back to Search Groups</span>
+            <span>Back to Lead Directory</span>
           </Button>
           <div className="flex flex-wrap items-center gap-2 mb-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-stone-500">
@@ -429,6 +435,15 @@ export default function LeadsDashboard({
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto">
+          <Button
+            size="sm"
+            onClick={() => setIsAddLeadOpen(true)}
+            className="text-xs h-9 bg-botanical-800 hover:bg-botanical-900 text-paper gap-1.5 cursor-pointer rounded-xl shadow-xs font-semibold"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span>Add Lead</span>
+          </Button>
+
           <Button
             variant="outline"
             size="sm"
@@ -680,7 +695,11 @@ export default function LeadsDashboard({
                               onClick: handleResetFilters,
                               icon: RotateCcw,
                             }
-                          : undefined
+                          : {
+                              label: "Add Lead Manually",
+                              onClick: () => setIsAddLeadOpen(true),
+                              icon: Plus,
+                            }
                       }
                       className="border-0 bg-transparent p-0"
                     />
@@ -911,6 +930,19 @@ export default function LeadsDashboard({
         isOpen={isSheetOpen}
         onClose={() => setIsSheetOpen(false)}
         onSaveRemark={handleSaveRemark}
+      />
+
+      {/* Add Single Lead Manually Modal */}
+      <LeadFormModal
+        isOpen={isAddLeadOpen}
+        onClose={() => setIsAddLeadOpen(false)}
+        targetGroup={group || { groupId: targetGroupId, query: groupQuery }}
+        onSuccess={() => {
+          refetchLeads();
+          refetchGroup();
+          setSyncFeedback("Lead successfully added to this group!");
+          setTimeout(() => setSyncFeedback(null), 3000);
+        }}
       />
     </div>
   );
