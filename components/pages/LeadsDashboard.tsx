@@ -27,7 +27,6 @@ export default function LeadsDashboard({ user }: LeadsDashboardProps) {
   const router = useRouter();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [groups, setGroups] = useState<SearchGroup[]>([]);
-  const [globalSearch, setGlobalSearch] = useState<string>("");
   const [leadsSubView, setLeadsSubView] = useState<"groups" | "all">("groups");
 
   // Lead detail sheet state
@@ -187,8 +186,6 @@ export default function LeadsDashboard({ user }: LeadsDashboardProps) {
     <AppShell
       activeTab="leads"
       onTabChange={() => {}}
-      searchQuery={globalSearch}
-      onSearchChange={setGlobalSearch}
       totalLeadsCount={leads.length}
       totalGroupsCount={groups.length}
       onRefreshData={handleRefreshData}
@@ -275,7 +272,6 @@ export default function LeadsDashboard({ user }: LeadsDashboardProps) {
           <LeadTable
             leads={leads}
             onSelectLead={handleSelectLead}
-            externalSearch={globalSearch}
           />
         )}
       </div>

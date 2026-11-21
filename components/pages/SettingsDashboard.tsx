@@ -63,7 +63,6 @@ export default function SettingsDashboard({ user: initialUser }: SettingsDashboa
   const { data: session } = useSession();
 
   const [activeTab, setActiveTab] = useState<string>("settings");
-  const [globalSearch, setGlobalSearch] = useState<string>("");
   const [activeSection, setActiveSection] = useState<
     "profile" | "workspace" | "security"
   >("profile");
@@ -387,8 +386,6 @@ export default function SettingsDashboard({ user: initialUser }: SettingsDashboa
     <AppShell
       activeTab={activeTab}
       onTabChange={setActiveTab}
-      searchQuery={globalSearch}
-      onSearchChange={setGlobalSearch}
       totalLeadsCount={mockLeads.length}
       totalGroupsCount={mockSearchGroups.length}
     >

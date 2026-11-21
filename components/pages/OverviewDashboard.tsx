@@ -41,7 +41,6 @@ export default function OverviewDashboard({ user }: OverviewDashboardProps) {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [groups, setGroups] = useState<SearchGroup[]>([]);
   const [activities, setActivities] = useState<ActivityEvent[]>([]);
-  const [globalSearch, setGlobalSearch] = useState<string>("");
 
   // Lead detail sheet state
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -227,8 +226,6 @@ export default function OverviewDashboard({ user }: OverviewDashboardProps) {
     <AppShell
       activeTab="overview"
       onTabChange={() => {}}
-      searchQuery={globalSearch}
-      onSearchChange={setGlobalSearch}
       totalLeadsCount={totalLeads}
       totalGroupsCount={totalGroupsCount}
       onRefreshData={handleRefreshData}
@@ -415,7 +412,6 @@ export default function OverviewDashboard({ user }: OverviewDashboardProps) {
           <LeadTable
             leads={leads.slice(0, 5)}
             onSelectLead={handleSelectLead}
-            externalSearch={globalSearch}
           />
         </div>
       </div>

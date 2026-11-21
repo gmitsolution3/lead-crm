@@ -9,8 +9,6 @@ interface AppShellProps {
   children: React.ReactNode;
   activeTab: string;
   onTabChange: (tab: string) => void;
-  searchQuery: string;
-  onSearchChange: (query: string) => void;
   totalLeadsCount: number;
   totalGroupsCount: number;
   onRefreshData?: () => void;
@@ -23,8 +21,6 @@ export function AppShell({
   children,
   activeTab,
   onTabChange,
-  searchQuery,
-  onSearchChange,
   totalLeadsCount,
   totalGroupsCount,
   onRefreshData,
@@ -63,8 +59,6 @@ export function AppShell({
       {/* Main App Container */}
       <div className="flex flex-1 flex-col min-w-0">
         <Header
-          searchQuery={searchQuery}
-          onSearchChange={onSearchChange}
           onOpenMobileSidebar={() => setMobileSidebarOpen(true)}
           onRefreshData={onRefreshData}
           selectedGroupQuery={selectedGroupQuery}

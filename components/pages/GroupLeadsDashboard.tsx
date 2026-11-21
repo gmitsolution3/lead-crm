@@ -33,7 +33,6 @@ export default function GroupLeadsDashboard({
   const decodedId = decodeURIComponent(groupId || "");
   const [allLeads, setAllLeads] = useState<Lead[]>([]);
   const [groups, setGroups] = useState<SearchGroup[]>([]);
-  const [globalSearch, setGlobalSearch] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
 
   // Lead detail sheet state
@@ -204,8 +203,6 @@ export default function GroupLeadsDashboard({
     <AppShell
       activeTab="leads"
       onTabChange={() => {}}
-      searchQuery={globalSearch}
-      onSearchChange={setGlobalSearch}
       totalLeadsCount={allLeads.length}
       totalGroupsCount={groups.length}
       onRefreshData={fetchDashboardData}
@@ -309,9 +306,10 @@ export default function GroupLeadsDashboard({
           </div>
         ) : (
           <LeadTable
+            groupId={targetGroup?.groupId || groupQuery}
+            selectedGroupQuery={groupQuery}
             leads={groupLeads}
             onSelectLead={handleSelectLead}
-            externalSearch={globalSearch}
           />
         )}
       </div>

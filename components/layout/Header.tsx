@@ -2,14 +2,11 @@
 
 import React from "react";
 import {
-  Search,
   Bell,
   RefreshCw,
   Menu,
-  Plus,
   LogOut,
 } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -23,8 +20,6 @@ import { useSession, signOut } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 
 interface HeaderProps {
-  searchQuery: string;
-  onSearchChange: (query: string) => void;
   onOpenMobileSidebar?: () => void;
   onRefreshData?: () => void;
   selectedGroupQuery?: string | null;
@@ -32,8 +27,6 @@ interface HeaderProps {
 }
 
 export function Header({
-  searchQuery,
-  onSearchChange,
   onOpenMobileSidebar,
   onRefreshData,
   selectedGroupQuery,
@@ -54,7 +47,7 @@ export function Header({
 
   return (
     <header className="sticky top-0 z-30 flex h-18 w-full items-center justify-between border-b border-stone-200/90 bg-paper/95 px-4 backdrop-blur-md md:px-8">
-      {/* Left section: mobile hamburger + global search */}
+      {/* Left section: mobile hamburger + active group filter */}
       <div className="flex flex-1 items-center gap-3 md:gap-6">
         <Button
           variant="ghost"
@@ -65,23 +58,9 @@ export function Header({
           <Menu className="h-5 w-5" />
         </Button>
 
-        {/* Global Search Bar */}
-        <div className="relative w-full max-w-md">
-          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
-          <Input
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search leads by name, email, phone, city, or query..."
-            className="h-10 w-full pl-9 pr-12 text-sm bg-oatmeal-100/60 border-stone-200 focus:bg-paper transition-all"
-          />
-          <kbd className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 hidden h-5 select-none items-center gap-1 rounded border border-stone-300 bg-paper px-1.5 text-[10px] font-medium text-stone-500 sm:inline-flex">
-            ⌘K
-          </kbd>
-        </div>
-
         {/* Active Filter Pill if a search group is filtered */}
         {selectedGroupQuery && (
-          <div className="hidden lg:flex items-center gap-2 rounded-xl border border-sage-300 bg-sage-50/80 px-3 py-1 text-xs">
+          <div className="flex items-center gap-2 rounded-xl border border-sage-300 bg-sage-50/80 px-3 py-1 text-xs">
             <span className="font-medium text-botanical-800 truncate max-w-[200px]">
               Filtering: {selectedGroupQuery}
             </span>

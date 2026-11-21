@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   Table,
   TableHeader,
@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Lead } from "@/types";
 import { formatDate } from "@/lib/utils";
+import { apiClient } from "@/lib/axios";
 import {
   Mail,
   Phone,
@@ -30,6 +31,11 @@ import {
   Sparkles,
   Globe,
   ExternalLink,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Loader2,
 } from "lucide-react";
 import {
   FacebookIcon,
@@ -39,90 +45,161 @@ import {
 } from "@/components/ui/icons";
 
 interface LeadTableProps {
-  leads: Lead[];
+  leads?: Lead[];
+  groupId?: string;
   onSelectLead: (lead: Lead) => void;
   externalSearch?: string;
   selectedGroupQuery?: string | null;
   onClearGroupFilter?: () => void;
 }
 
+function generatePageNumbers(current: number, total: number): (number | "...")[] {
+  if (total <= 5) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  const pages: (number | "...")[] = [];
+  pages.push(1);
+  if (current > 3) {
+    pages.push("...");
+  }
+  const start = Math.max(2, current - 1);
+  const end = Math.min(total - 1, current + 1);
+  for (let i = start; i <= end; i++) {
+    pages.push(i);
+  }
+  if (current < total - 2) {
+    pages.push("...");
+  }
+  pages.push(total);
+  return pages;
+}
+
 export function LeadTable({
-  leads,
+  leads = [],
+  groupId,
   onSelectLead,
   externalSearch = "",
   selectedGroupQuery,
   onClearGroupFilter,
 }: LeadTableProps) {
   const [tableSearch, setTableSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [websiteFilter, setWebsiteFilter] = useState<"all" | "no-website" | "has-website">("all");
-  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "name_asc" | "name_desc">("newest");
+  const [sortBy, setSortBy] = useState<"default" | "newest" | "oldest" | "name_asc" | "name_desc">("default");
+  const [page, setPage] = useState<number>(1);
+  const [limit, setLimit] = useState<number>(10);
 
-  // Counts for quick filter
-  const noWebsiteCount = useMemo(() => leads.filter((l) => !l.website).length, [leads]);
-  const hasWebsiteCount = useMemo(() => leads.filter((l) => Boolean(l.website)).length, [leads]);
+  // Server-side loaded leads & pagination metadata
+  const [serverLeads, setServerLeads] = useState<Lead[]>(leads.slice(0, 10));
+  const [meta, setMeta] = useState<{
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    totalAll?: number;
+    noWebsiteCount?: number;
+    hasWebsiteCount?: number;
+  }>({
+    page: 1,
+    limit: 10,
+    total: leads.length,
+    totalPages: Math.max(1, Math.ceil((leads.length || 1) / 10)),
+    totalAll: leads.length,
+    noWebsiteCount: leads.filter((l) => !l.website).length,
+    hasWebsiteCount: leads.filter((l) => Boolean(l.website)).length,
+  });
+  const [loading, setLoading] = useState(false);
 
-  // Effective search combines table internal search and external global search
-  const effectiveSearch = (tableSearch || externalSearch).trim().toLowerCase();
+  // Debounce search input so backend isn't spammed while typing
+  const effectiveSearch = (tableSearch || externalSearch).trim();
 
-  // Filter and Sort leads
-  const filteredLeads = useMemo(() => {
-    return leads
-      .filter((lead) => {
-        // Website / Potential Client filter
-        if (websiteFilter === "no-website" && lead.website) {
-          return false;
-        }
-        if (websiteFilter === "has-website" && !lead.website) {
-          return false;
-        }
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(effectiveSearch);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [effectiveSearch]);
 
-        // Source filter
-        if (sourceFilter !== "all" && lead.source.toLowerCase() !== sourceFilter.toLowerCase()) {
-          return false;
-        }
+  const targetGroup = (groupId || selectedGroupQuery || "").trim();
 
-        // Group filter if passed
-        if (selectedGroupQuery && lead.searchQuery !== selectedGroupQuery) {
-          return false;
-        }
-
-        // Search text matching
-        if (!effectiveSearch) return true;
-
-        return (
-          lead.name.toLowerCase().includes(effectiveSearch) ||
-          lead.email?.toLowerCase().includes(effectiveSearch) ||
-          lead.phone?.toLowerCase().includes(effectiveSearch) ||
-          lead.website?.toLowerCase().includes(effectiveSearch) ||
-          lead.searchQuery?.toLowerCase().includes(effectiveSearch) ||
-          lead.address?.toLowerCase().includes(effectiveSearch) ||
-          lead.remark?.toLowerCase().includes(effectiveSearch)
-        );
-      })
-      .sort((a, b) => {
-        if (sortBy === "newest") {
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        }
-        if (sortBy === "oldest") {
-          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-        }
-        if (sortBy === "name_asc") {
-          return a.name.localeCompare(b.name);
-        }
-        if (sortBy === "name_desc") {
-          return b.name.localeCompare(a.name);
-        }
-        return 0;
+  // Fetch paginated & filtered leads from backend
+  const fetchServerLeads = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await apiClient.get<any>("/leads", {
+        params: {
+          page,
+          limit,
+          search: debouncedSearch || undefined,
+          source: sourceFilter !== "all" ? sourceFilter : undefined,
+          websiteFilter: websiteFilter !== "all" ? websiteFilter : undefined,
+          groupId: targetGroup || undefined,
+          sortBy: sortBy !== "default" ? sortBy : undefined,
+        },
       });
-  }, [leads, websiteFilter, sourceFilter, selectedGroupQuery, effectiveSearch, sortBy]);
+
+      const items = res.data?.data;
+      const paginationMeta = res.data?.meta;
+
+      if (Array.isArray(items)) {
+        setServerLeads(items);
+      }
+      if (paginationMeta) {
+        setMeta(paginationMeta);
+      }
+    } catch {
+      // Offline fallback
+      if (leads.length > 0) {
+        let filtered = leads.filter((l) => {
+          if (targetGroup && l.groupId !== targetGroup && l.searchQuery !== targetGroup) return false;
+          if (sourceFilter !== "all" && l.source.toLowerCase() !== sourceFilter.toLowerCase()) return false;
+          if (websiteFilter === "no-website" && l.website) return false;
+          if (websiteFilter === "has-website" && !l.website) return false;
+          if (debouncedSearch) {
+            const s = debouncedSearch.toLowerCase();
+            return (
+              l.name.toLowerCase().includes(s) ||
+              l.phone?.toLowerCase().includes(s) ||
+              l.email?.toLowerCase().includes(s) ||
+              l.website?.toLowerCase().includes(s) ||
+              l.address?.toLowerCase().includes(s)
+            );
+          }
+          return true;
+        });
+
+        const total = filtered.length;
+        const totalPages = Math.max(1, Math.ceil(total / limit));
+        const skip = (page - 1) * limit;
+        setServerLeads(filtered.slice(skip, skip + limit));
+        setMeta({
+          page,
+          limit,
+          total,
+          totalPages,
+          totalAll: leads.length,
+          noWebsiteCount: leads.filter((l) => !l.website).length,
+          hasWebsiteCount: leads.filter((l) => Boolean(l.website)).length,
+        });
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [page, limit, debouncedSearch, sourceFilter, websiteFilter, targetGroup, sortBy, leads]);
+
+  useEffect(() => {
+    fetchServerLeads();
+  }, [fetchServerLeads]);
 
   // Unique sources for filter dropdown
   const uniqueSources = useMemo(() => {
-    const set = new Set<string>();
+    const set = new Set<string>(["Google Maps", "Facebook", "LinkedIn"]);
     leads.forEach((l) => set.add(l.source));
+    serverLeads.forEach((l) => set.add(l.source));
     return Array.from(set);
-  }, [leads]);
+  }, [leads, serverLeads]);
 
   const getSourceBadge = (source: string) => {
     const s = source.toLowerCase();
@@ -172,19 +249,19 @@ export function LeadTable({
       "Created At",
     ];
 
-    const rows = filteredLeads.map((l) => [
+    const rows = serverLeads.map((l) => [
       `"${l.leadId}"`,
       `"${l.name.replace(/"/g, '""')}"`,
-      `"${l.phone}"`,
-      `"${l.email}"`,
+      `"${l.phone || ""}"`,
+      `"${l.email || ""}"`,
       `"${l.website || ""}"`,
       `"${!l.website ? "Yes (No Website)" : "No"}"`,
       `"${l.source}"`,
       `"${l.searchQuery.replace(/"/g, '""')}"`,
-      `"${l.address.replace(/"/g, '""')}"`,
-      `"${l.whatsapp}"`,
-      `"${l.instagram}"`,
-      `"${l.linkedin}"`,
+      `"${(l.address || "").replace(/"/g, '""')}"`,
+      `"${l.whatsapp || ""}"`,
+      `"${l.instagram || ""}"`,
+      `"${l.linkedin || ""}"`,
       `"${(l.remark || "").replace(/"/g, '""')}"`,
       `"${l.createdAt}"`,
     ]);
@@ -199,38 +276,47 @@ export function LeadTable({
     document.body.removeChild(link);
   };
 
+  const startRecord = meta.total === 0 ? 0 : (meta.page - 1) * meta.limit + 1;
+  const endRecord = Math.min(meta.page * meta.limit, meta.total);
+
   return (
     <div className="space-y-4">
       {/* Table Toolbar */}
       <div className="flex flex-col gap-3 rounded-2xl border border-stone-200/90 bg-[#FCFBF8] p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-1 flex-wrap items-center gap-2.5">
-          {/* Internal search */}
+          {/* Backend-driven Search */}
           <div className="relative w-full max-w-xs">
             <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-stone-400" />
             <Input
               value={tableSearch}
               onChange={(e) => setTableSearch(e.target.value)}
-              placeholder="Filter current view..."
+              placeholder="Search leads in database..."
               className="h-9 pl-8 text-xs bg-oatmeal-100/60 border-stone-200"
             />
           </div>
 
-          {/* Quick Filter: All vs Potential Clients (No Website) */}
+          {/* Backend Quick Filter: All vs Potential Clients (No Website) */}
           <div className="flex items-center rounded-xl bg-oatmeal-200/70 p-1 border border-stone-200/80">
             <button
               type="button"
-              onClick={() => setWebsiteFilter("all")}
+              onClick={() => {
+                setWebsiteFilter("all");
+                setPage(1);
+              }}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                 websiteFilter === "all"
                   ? "bg-paper text-botanical-900 shadow-xs"
                   : "text-stone-600 hover:text-botanical-900"
               }`}
             >
-              All ({leads.length})
+              All ({meta.totalAll ?? meta.total})
             </button>
             <button
               type="button"
-              onClick={() => setWebsiteFilter("no-website")}
+              onClick={() => {
+                setWebsiteFilter("no-website");
+                setPage(1);
+              }}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                 websiteFilter === "no-website"
                   ? "bg-terracotta-100 text-terracotta-900 shadow-xs border border-terracotta-300"
@@ -239,22 +325,25 @@ export function LeadTable({
               title="Leads without website are prime potential clients"
             >
               <Sparkles className="h-3 w-3 text-terracotta-600" />
-              <span>Potential Clients ({noWebsiteCount})</span>
+              <span>Potential Clients ({meta.noWebsiteCount ?? 0})</span>
             </button>
             <button
               type="button"
-              onClick={() => setWebsiteFilter("has-website")}
+              onClick={() => {
+                setWebsiteFilter("has-website");
+                setPage(1);
+              }}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                 websiteFilter === "has-website"
                   ? "bg-paper text-botanical-900 shadow-xs"
                   : "text-stone-600 hover:text-botanical-900"
               }`}
             >
-              With Website ({hasWebsiteCount})
+              With Website ({meta.hasWebsiteCount ?? 0})
             </button>
           </div>
 
-          {/* Source filter */}
+          {/* Backend Source filter */}
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
@@ -265,18 +354,18 @@ export function LeadTable({
               <span>Source: {sourceFilter === "all" ? "All" : sourceFilter}</span>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-44">
-              <DropdownMenuItem onClick={() => setSourceFilter("all")}>
+              <DropdownMenuItem onClick={() => { setSourceFilter("all"); setPage(1); }}>
                 All Sources
               </DropdownMenuItem>
               {uniqueSources.map((source) => (
-                <DropdownMenuItem key={source} onClick={() => setSourceFilter(source)}>
+                <DropdownMenuItem key={source} onClick={() => { setSourceFilter(source); setPage(1); }}>
                   {source}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Sort order */}
+          {/* Backend Sort order */}
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
@@ -286,7 +375,9 @@ export function LeadTable({
               <ArrowUpDown className="h-3.5 w-3.5 text-botanical-700" />
               <span>
                 Sort:{" "}
-                {sortBy === "newest"
+                {sortBy === "default"
+                  ? "Default (Source Priority)"
+                  : sortBy === "newest"
                   ? "Newest"
                   : sortBy === "oldest"
                   ? "Oldest"
@@ -295,24 +386,27 @@ export function LeadTable({
                   : "Name (Z-A)"}
               </span>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-40">
-              <DropdownMenuItem onClick={() => setSortBy("newest")}>
+            <DropdownMenuContent align="start" className="w-48">
+              <DropdownMenuItem onClick={() => { setSortBy("default"); setPage(1); }}>
+                Default (Source Priority)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => { setSortBy("newest"); setPage(1); }}>
                 Newest First
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortBy("oldest")}>
+              <DropdownMenuItem onClick={() => { setSortBy("oldest"); setPage(1); }}>
                 Oldest First
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortBy("name_asc")}>
+              <DropdownMenuItem onClick={() => { setSortBy("name_asc"); setPage(1); }}>
                 Name (A-Z)
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortBy("name_desc")}>
+              <DropdownMenuItem onClick={() => { setSortBy("name_desc"); setPage(1); }}>
                 Name (Z-A)
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
           {/* Reset button if filtered */}
-          {(sourceFilter !== "all" || websiteFilter !== "all" || tableSearch || selectedGroupQuery) && (
+          {(sourceFilter !== "all" || websiteFilter !== "all" || tableSearch || selectedGroupQuery || sortBy !== "default") && (
             <Button
               variant="ghost"
               size="sm"
@@ -320,6 +414,8 @@ export function LeadTable({
                 setSourceFilter("all");
                 setWebsiteFilter("all");
                 setTableSearch("");
+                setSortBy("default");
+                setPage(1);
                 onClearGroupFilter?.();
               }}
               className="h-9 text-xs text-stone-500 hover:text-stone-800 cursor-pointer"
@@ -332,7 +428,16 @@ export function LeadTable({
         {/* Right side actions: Count & Export */}
         <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-stone-200">
           <span className="text-xs font-medium text-stone-500">
-            Showing <strong className="text-botanical-900">{filteredLeads.length}</strong> of {leads.length} leads
+            {loading ? (
+              <span className="flex items-center gap-1.5 text-sage-600">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <span>Loading...</span>
+              </span>
+            ) : (
+              <>
+                Showing <strong className="text-botanical-900">{startRecord}-{endRecord}</strong> of {meta.total} leads
+              </>
+            )}
           </span>
 
           <Button
@@ -362,7 +467,18 @@ export function LeadTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredLeads.length === 0 ? (
+            {loading && serverLeads.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="h-44 text-center">
+                  <div className="flex flex-col items-center justify-center text-stone-500 gap-2">
+                    <Loader2 className="h-6 w-6 animate-spin text-botanical-700" />
+                    <p className="text-sm font-semibold text-botanical-900">
+                      Loading leads from database...
+                    </p>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : serverLeads.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="h-44 text-center">
                   <div className="flex flex-col items-center justify-center text-stone-500">
@@ -376,7 +492,7 @@ export function LeadTable({
                 </TableCell>
               </TableRow>
             ) : (
-              filteredLeads.map((lead, index) => {
+              serverLeads.map((lead, index) => {
                 const isEven = index % 2 === 1;
                 return (
                   <TableRow
@@ -455,7 +571,7 @@ export function LeadTable({
                         </a>
                       ) : (
                         <div className="flex flex-col items-start gap-0.5">
-                          <span className="inline-flex items-center gap-1 rounded-full bg-terracotta-100/90 border border-terracotta-300/80 px-2 py-0.5 text-[10px] font-semibold text-terracotta-800 shadow-2xs whitespace-nowrap">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-terracotta-100/90 border border-terracotta-300/80 px-2.5 py-0.5 text-[10px] font-semibold text-terracotta-800 shadow-2xs whitespace-nowrap">
                             <Sparkles className="h-2.5 w-2.5 text-terracotta-600 shrink-0" />
                             Potential Client
                           </span>
@@ -473,7 +589,7 @@ export function LeadTable({
 
                     {/* Search Query */}
                     <TableCell>
-                      <span className="inline-block max-w-[220px] truncate text-xs text-stone-600 rounded-md bg-oatmeal-200/60 px-2 py-1">
+                      <span className="inline-block max-w-[200px] truncate text-xs text-stone-600 rounded-md bg-oatmeal-200/60 px-2 py-1">
                         {lead.searchQuery}
                       </span>
                     </TableCell>
@@ -564,6 +680,98 @@ export function LeadTable({
             )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Backend-Driven Pagination Controls */}
+      <div className="flex flex-col gap-3 rounded-2xl border border-stone-200/90 bg-[#FCFBF8] p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] sm:flex-row sm:items-center sm:justify-between text-xs text-stone-600">
+        <div className="flex items-center gap-2">
+          <span>Rows per page:</span>
+          <select
+            value={limit}
+            onChange={(e) => {
+              setLimit(Number(e.target.value));
+              setPage(1);
+            }}
+            className="h-8 rounded-lg border border-stone-200 bg-paper px-2 text-xs text-botanical-900 focus:outline-none focus:ring-1 focus:ring-botanical-600 cursor-pointer"
+          >
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+          </select>
+          <span className="text-stone-400 ml-2">
+            Page <strong className="text-botanical-900">{meta.page}</strong> of{" "}
+            <strong className="text-botanical-900">{meta.totalPages}</strong> ({meta.total} total leads)
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1.5 self-end sm:self-auto">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage(1)}
+            disabled={page <= 1 || loading}
+            className="h-8 w-8 p-0 border-stone-200 cursor-pointer disabled:opacity-40"
+            title="First Page"
+          >
+            <ChevronsLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page <= 1 || loading}
+            className="h-8 gap-1 px-2.5 border-stone-200 cursor-pointer disabled:opacity-40"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <span className="hidden sm:inline">Prev</span>
+          </Button>
+
+          {/* Page Number Pills */}
+          <div className="flex items-center gap-1 px-1">
+            {generatePageNumbers(meta.page, meta.totalPages).map((p, idx) =>
+              p === "..." ? (
+                <span key={`ellipsis-${idx}`} className="px-1 text-stone-400">
+                  ...
+                </span>
+              ) : (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setPage(Number(p))}
+                  disabled={loading}
+                  className={`h-8 w-8 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                    page === p
+                      ? "bg-botanical-800 text-paper shadow-2xs"
+                      : "text-stone-700 hover:bg-oatmeal-200/80 border border-stone-200/60"
+                  }`}
+                >
+                  {p}
+                </button>
+              )
+            )}
+          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))}
+            disabled={page >= meta.totalPages || loading}
+            className="h-8 gap-1 px-2.5 border-stone-200 cursor-pointer disabled:opacity-40"
+          >
+            <span className="hidden sm:inline">Next</span>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage(meta.totalPages)}
+            disabled={page >= meta.totalPages || loading}
+            className="h-8 w-8 p-0 border-stone-200 cursor-pointer disabled:opacity-40"
+            title="Last Page"
+          >
+            <ChevronsRight className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </div>
   );

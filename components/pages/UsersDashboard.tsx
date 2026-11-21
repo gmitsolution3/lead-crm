@@ -17,14 +17,11 @@ interface UsersDashboardProps {
 
 export default function UsersDashboard({ user }: UsersDashboardProps) {
   const [activeTab, setActiveTab] = useState<string>("users");
-  const [globalSearch, setGlobalSearch] = useState<string>("");
 
   return (
     <AppShell
       activeTab={activeTab}
       onTabChange={setActiveTab}
-      searchQuery={globalSearch}
-      onSearchChange={setGlobalSearch}
       totalLeadsCount={mockLeads.length}
       totalGroupsCount={mockSearchGroups.length}
     >
