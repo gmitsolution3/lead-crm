@@ -46,6 +46,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 
 export interface ManagedUser {
   id: string;
@@ -65,16 +66,34 @@ export interface ManagedUser {
 export function UserManagementSystem() {
   const { data: session } = useSession();
   const currentUserId = session?.user?.id;
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const initialSearch = searchParams?.get("search") || "";
+  const initialRole = (searchParams?.get("role") as any) || "all";
+  const initialStatus = (searchParams?.get("status") as any) || "all";
 
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [roleFilter, setRoleFilter] = useState<
     "all" | "admin" | "user"
-  >("all");
+  >(initialRole);
   const [statusFilter, setStatusFilter] = useState<
     "all" | "active" | "banned" | "pending"
-  >("all");
+  >(initialStatus);
+
+  // Sync URL query params with current filter state
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (searchQuery.trim()) params.set("search", searchQuery.trim());
+    if (roleFilter !== "all") params.set("role", roleFilter);
+    if (statusFilter !== "all") params.set("status", statusFilter);
+
+    const qs = params.toString();
+    const newUrl = qs ? `${pathname}?${qs}` : pathname;
+    window.history.replaceState(null, "", newUrl);
+  }, [searchQuery, roleFilter, statusFilter, pathname]);
 
   // Action states
   const [isProcessing, setIsProcessing] = useState(false);

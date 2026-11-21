@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ActivityEvent } from "@/lib/mock-data";
+import type { ActivityEvent } from "@/types";
 import { formatRelativeTime } from "@/lib/utils";
 
 interface RecentActivityFeedProps {
@@ -83,40 +83,52 @@ export function RecentActivityFeed({
       </CardHeader>
 
       <CardContent className="pt-2">
-        <div className="divide-y divide-stone-200/70">
-          {activities.map((event, idx) => (
-            <motion.div
-              key={event.id}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: idx * 0.08, duration: 0.3 }}
-              className="group flex flex-col sm:flex-row sm:items-center justify-between py-3.5 px-2 hover:bg-oatmeal-100/60 rounded-xl transition-colors cursor-pointer"
-              onClick={() => onSelectLeadByName?.(event.leadName)}
-            >
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5">{getActionBadge(event.action)}</div>
-                <div>
-                  <h4 className="text-sm font-semibold text-botanical-900 group-hover:text-botanical-700 transition-colors flex items-center gap-1.5">
-                    {event.leadName}
-                    <ArrowRight className="h-3 w-3 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-botanical-700" />
-                  </h4>
-                  <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-stone-500">
-                    <span className="font-medium text-stone-600">
-                      Query: {event.searchQuery}
-                    </span>
-                    <span>•</span>
-                    <span className="text-stone-500">Via {event.source}</span>
+        {activities.length === 0 ? (
+          <div className="py-10 text-center text-stone-500">
+            <Activity className="h-8 w-8 mx-auto text-stone-400 mb-2 opacity-50" />
+            <p className="text-sm font-semibold text-botanical-900">
+              No recent activity
+            </p>
+            <p className="text-xs text-stone-400 mt-1">
+              Events will appear here as leads are captured or enriched from the extension.
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-stone-200/70">
+            {activities.map((event, idx) => (
+              <motion.div
+                key={event.id}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.08, duration: 0.3 }}
+                className="group flex flex-col sm:flex-row sm:items-center justify-between py-3.5 px-2 hover:bg-oatmeal-100/60 rounded-xl transition-colors cursor-pointer"
+                onClick={() => onSelectLeadByName?.(event.leadName)}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5">{getActionBadge(event.action)}</div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-botanical-900 group-hover:text-botanical-700 transition-colors flex items-center gap-1.5">
+                      {event.leadName}
+                      <ArrowRight className="h-3 w-3 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-botanical-700" />
+                    </h4>
+                    <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-stone-500">
+                      <span className="font-medium text-stone-600">
+                        Query: {event.searchQuery}
+                      </span>
+                      <span>•</span>
+                      <span className="text-stone-500">Via {event.source}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="mt-2 sm:mt-0 flex items-center gap-1.5 text-xs text-stone-400 pl-8 sm:pl-0">
-                <Clock className="h-3.5 w-3.5" />
-                <span>{isClient ? formatRelativeTime(event.timestamp) : "Recently"}</span>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+                <div className="mt-2 sm:mt-0 flex items-center gap-1.5 text-xs text-stone-400 pl-8 sm:pl-0">
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>{isClient ? formatRelativeTime(event.timestamp) : "Recently"}</span>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

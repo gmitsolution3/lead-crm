@@ -1,14 +1,18 @@
 import type { auth } from "@/lib/auth";
 
 export interface SearchGroup {
+  id?: string;
   groupId: string;
   query: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: string | number;
+  updatedAt: string | number;
+  leadCount?: number;
+  potentialCount?: number;
   leads?: Lead[];
 }
 
 export interface Lead {
+  id?: string;
   leadId: string;
   groupId: string;
   searchQuery: string;
@@ -17,14 +21,14 @@ export interface Lead {
   phone: string;
   email: string;
   website: string;
-  address: string;
-  facebook: string;
-  instagram: string;
-  linkedin: string;
-  whatsapp: string;
-  remark: string;
-  createdAt: string;
-  updatedAt: string;
+  address?: string;
+  facebook?: string;
+  instagram?: string;
+  linkedin?: string;
+  whatsapp?: string;
+  remark?: string;
+  createdAt: string | number;
+  updatedAt: string | number;
 }
 
 export type LeadSource =
@@ -42,6 +46,15 @@ export interface LeadMetrics {
   conversionRate: number;
   growthRate: number;
   enrichedPercentage: number;
+}
+
+export interface ActivityEvent {
+  id: string;
+  leadName: string;
+  searchQuery: string;
+  source: string;
+  action: "captured" | "enriched" | "contacted" | "tagged";
+  timestamp: string | number;
 }
 
 /**

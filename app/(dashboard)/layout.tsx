@@ -1,5 +1,5 @@
-import { requireAdminAuth } from "@/lib/auth-guard";
-import { DashboardShell } from "@/components/layout";
+import { AppShell } from "@/components/layout";
+import { requireAuth } from "@/lib/auth-guard";
 
 export const instant = false;
 
@@ -8,6 +8,6 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await requireAdminAuth();
-  return <DashboardShell user={session.user}>{children}</DashboardShell>;
+  const session = await requireAuth();
+  return <AppShell user={session.user}>{children}</AppShell>;
 }

@@ -1,5 +1,6 @@
-import { requireAdminAuth } from "@/lib/auth-guard";
-import GroupLeadsDashboard from "@/components/pages/GroupLeadsDashboard";
+import { Suspense } from "react";
+import LeadsDashboard from "@/components/pages/LeadsDashboard";
+import { requireAuth } from "@/lib/auth-guard";
 
 export const instant = false;
 
@@ -8,7 +9,11 @@ export default async function GroupLeadsPage({
 }: {
   params: Promise<{ groupId: string }>;
 }) {
-  const session = await requireAdminAuth();
+  const session = await requireAuth();
   const { groupId } = await params;
-  return <GroupLeadsDashboard user={session.user} groupId={groupId} />;
+  return (
+    <Suspense fallback={null}>
+      <LeadsDashboard user={session.user} groupId={groupId} />
+    </Suspense>
+  );
 }

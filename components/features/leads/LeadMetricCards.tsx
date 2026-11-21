@@ -24,8 +24,8 @@ export function LeadMetricCards({
     {
       title: "Total Leads Collected",
       value: totalLeads.toLocaleString(),
-      subtitle: "+34 captured this week",
-      trend: "+18.2%",
+      subtitle: totalLeads > 0 ? "Saved from extension" : "No leads captured yet",
+      trend: totalLeads > 0 ? "Active" : undefined,
       isPotential: false,
       icon: Users,
       accentColor: "text-botanical-700",
@@ -38,8 +38,11 @@ export function LeadMetricCards({
           {
             title: "Potential Clients (No Website)",
             value: (potentialClients || 0).toLocaleString(),
-            subtitle: "High-conversion prospects",
-            trend: `${Math.round(((potentialClients || 0) / (totalLeads || 1)) * 100)}% of leads`,
+            subtitle: totalLeads > 0 ? "High-conversion prospects" : "No records to evaluate",
+            trend:
+              totalLeads > 0
+                ? `${Math.round(((potentialClients || 0) / (totalLeads || 1)) * 100)}% of leads`
+                : undefined,
             isPotential: true,
             icon: Sparkles,
             accentColor: "text-terracotta-700",
@@ -52,8 +55,8 @@ export function LeadMetricCards({
     {
       title: "Search Groups",
       value: totalGroups.toString(),
-      subtitle: `${totalGroups} search sessions`,
-      trend: "+2 new",
+      subtitle: totalGroups > 0 ? `${totalGroups} search sessions` : "No search groups yet",
+      trend: totalGroups > 0 ? `${totalGroups} groups` : undefined,
       isPotential: false,
       icon: FolderKanban,
       accentColor: "text-terracotta-600",
@@ -64,8 +67,8 @@ export function LeadMetricCards({
     {
       title: "Direct Contact Rate",
       value: `${conversionRate}%`,
-      subtitle: "Verified phone & active email",
-      trend: "+4.5%",
+      subtitle: totalLeads > 0 ? "Verified phone & active email" : "Awaiting lead data",
+      trend: totalLeads > 0 ? `${conversionRate}% verified` : undefined,
       isPotential: false,
       icon: Percent,
       accentColor: "text-botanical-800",
@@ -126,20 +129,22 @@ export function LeadMetricCards({
                     <span className="text-3xl font-bold tracking-tight text-botanical-900 md:text-4xl">
                       {metric.value}
                     </span>
-                    <span
-                      className={`inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full border ${
-                        metric.isPotential
-                          ? "text-terracotta-800 bg-terracotta-50 border-terracotta-200"
-                          : "text-emerald-700 bg-emerald-50 border-emerald-200"
-                      }`}
-                    >
-                      {metric.isPotential ? (
-                        <Sparkles className="mr-1 h-3 w-3 text-terracotta-600" />
-                      ) : (
-                        <TrendingUp className="mr-0.5 h-3 w-3" />
-                      )}
-                      {metric.trend}
-                    </span>
+                    {metric.trend && (
+                      <span
+                        className={`inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full border ${
+                          metric.isPotential
+                            ? "text-terracotta-800 bg-terracotta-50 border-terracotta-200"
+                            : "text-emerald-700 bg-emerald-50 border-emerald-200"
+                        }`}
+                      >
+                        {metric.isPotential ? (
+                          <Sparkles className="mr-1 h-3 w-3 text-terracotta-600" />
+                        ) : (
+                          <TrendingUp className="mr-0.5 h-3 w-3" />
+                        )}
+                        {metric.trend}
+                      </span>
+                    )}
                   </div>
                 </div>
 

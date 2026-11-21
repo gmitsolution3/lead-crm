@@ -312,7 +312,7 @@ export function LeadDetailSheet({
                         Open in Google Maps
                       </a>
                       <button
-                        onClick={() => copyToClipboard(lead.address, "address")}
+                        onClick={() => copyToClipboard(lead.address || "", "address")}
                         className="text-xs text-stone-500 hover:text-stone-800 cursor-pointer"
                       >
                         {copiedField === "address" ? "Copied!" : "Copy address"}

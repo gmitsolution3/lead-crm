@@ -5,17 +5,28 @@ import { db } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 
 export interface GuardOptions {
-  requiredRole?: "admin" | "user";
+  /**
+   * List of roles permitted to access this resource.
+   * If omitted, any authenticated, active user is allowed.
+   */
+  allowedRoles?: string[];
+  /**
+   * Single role required to access this resource.
+   */
+  requiredRole?: string;
+  /**
+   * Destination path if unauthenticated or unauthorized. Defaults to "/login".
+   */
   redirectTo?: string;
 }
 
 /**
  * Server-side Authentication & Authorization Guard.
- * Checks session, MongoDB ban status, and role.
+ * Checks session, MongoDB ban status, and role permissions.
  * Redirects unauthorized users automatically before rendering server components.
  */
 export async function requireAuth(options: GuardOptions = {}) {
-  const { requiredRole = "admin", redirectTo = "/login" } = options;
+  const { allowedRoles, requiredRole, redirectTo = "/login" } = options;
 
   const headerList = await headers();
   const session = await auth.api.getSession({
@@ -50,10 +61,20 @@ export async function requireAuth(options: GuardOptions = {}) {
     redirect(`${redirectTo}?error=banned`);
   }
 
-  // 4. Check required role
-  const userRole = dbUser.role || (session.user as any).role || "user";
-  if (requiredRole === "admin" && userRole !== "admin") {
-    redirect(`${redirectTo}?error=pending`);
+  // 4. Role Authorization check
+  const userRole = (dbUser.role || (session.user as any).role || "user").toLowerCase();
+
+  // If specific single role is required
+  if (requiredRole && userRole !== requiredRole.toLowerCase()) {
+    redirect(`${redirectTo}?error=unauthorized`);
+  }
+
+  // If a list of allowed roles is specified
+  if (allowedRoles && allowedRoles.length > 0) {
+    const normalizedAllowed = allowedRoles.map((r) => r.toLowerCase());
+    if (!normalizedAllowed.includes(userRole)) {
+      redirect(`${redirectTo}?error=unauthorized`);
+    }
   }
 
   return {
@@ -69,7 +90,7 @@ export async function requireAuth(options: GuardOptions = {}) {
 }
 
 /**
- * Convenience helper specifically for admin-protected pages.
+ * Convenience helper specifically for admin-protected pages (e.g. /users).
  */
 export async function requireAdminAuth(redirectTo = "/login") {
   return requireAuth({ requiredRole: "admin", redirectTo });
@@ -77,7 +98,7 @@ export async function requireAdminAuth(redirectTo = "/login") {
 
 /**
  * Optional helper for public pages (e.g. /login, /register)
- * Redirects already logged-in admins to the dashboard.
+ * Redirects already logged-in users to the dashboard.
  */
 export async function redirectIfAuthenticated(redirectTo = "/") {
   try {
@@ -86,7 +107,7 @@ export async function redirectIfAuthenticated(redirectTo = "/") {
       headers: headerList,
     });
 
-    if (session?.user && (session.user as any).role === "admin") {
+    if (session?.user) {
       redirect(redirectTo);
     }
   } catch (err) {

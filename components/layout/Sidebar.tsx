@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -17,22 +17,25 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useSession, signOut } from "@/lib/auth-client";
+import { useFetch } from "@/hooks";
+import type { User } from "@/types";
 
 interface SidebarProps {
-  activeTab: string;
-  onTabChange: (tab: string) => void;
-  totalLeadsCount: number;
-  totalGroupsCount: number;
+  user?: User | null;
+  activeTab?: string;
+  onTabChange?: (tab: string) => void;
+  totalLeadsCount?: number;
+  totalGroupsCount?: number;
   isMobile?: boolean;
   onCloseMobile?: () => void;
   onExportLeads?: () => void;
 }
 
 export function Sidebar({
+  user,
   activeTab,
   onTabChange,
   totalLeadsCount,
-  totalGroupsCount,
   isMobile,
   onCloseMobile,
   onExportLeads,
@@ -41,17 +44,35 @@ export function Sidebar({
   const pathname = usePathname();
   const { data: session } = useSession();
 
+  const currentUser = user || session?.user;
+  const userRole = ((currentUser as any)?.role || "user").toLowerCase();
+  const isAdmin = userRole === "admin";
+
+  // Reusable SWR hook to fetch search groups & compute leads badge automatically
+  const { data: searchGroupsData } = useFetch<any>("/search-groups");
+
+  const totalLeads = useMemo(() => {
+    if (totalLeadsCount !== undefined) return totalLeadsCount;
+    const raw = searchGroupsData?.data || searchGroupsData;
+    if (!Array.isArray(raw)) return 0;
+    return raw.reduce(
+      (acc: number, g: any) =>
+        acc + (Array.isArray(g.leads) ? g.leads.length : 0),
+      0
+    );
+  }, [totalLeadsCount, searchGroupsData]);
+
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
-  const userName = session?.user?.name || "Admin Architect";
-  const userEmail = session?.user?.email || "admin@gmleadgenerator.com";
+  const userName = currentUser?.name || (isAdmin ? "Admin Architect" : "User");
+  const userEmail = currentUser?.email || "user@gmleadgenerator.com";
   const initials =
     userName
       .split(" ")
       .map((n) => n[0])
       .join("")
       .slice(0, 2)
-      .toUpperCase() || "AA";
+      .toUpperCase() || "U";
 
   const currentActiveTab =
     pathname === "/users"
@@ -62,7 +83,7 @@ export function Sidebar({
       ? "leads"
       : pathname === "/"
       ? "overview"
-      : activeTab;
+      : (activeTab || "overview");
 
   const navItems: {
     id: string;
@@ -79,26 +100,30 @@ export function Sidebar({
     },
     {
       id: "leads",
-      label: "Leads Table",
+      label: "Leads Group",
       icon: Users,
-      badge: totalLeadsCount.toString(),
+      badge: totalLeads > 0 ? totalLeads.toString() : null,
     },
   ];
 
-  const settingsItems = [
-    {
-      id: "users",
-      label: "Users",
-      icon: UserCog,
-      badge: null,
-    },
-    {
+  const settingsItems = useMemo(() => {
+    const items = [];
+    if (isAdmin) {
+      items.push({
+        id: "users",
+        label: "Users",
+        icon: UserCog,
+        badge: null,
+      });
+    }
+    items.push({
       id: "settings",
       label: "Settings",
       icon: Settings,
       badge: null,
-    },
-  ];
+    });
+    return items;
+  }, [isAdmin]);
 
   const handleSelect = (id: string) => {
     if (id === "users") {
@@ -246,22 +271,26 @@ export function Sidebar({
             })}
           </nav>
 
-          {/* Secondary Navigation */}
-          <div className="mt-6 px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
-            Admin Tools
-          </div>
-          <div className="space-y-1">
-            <button
-              onClick={handleExportClick}
-              className="group flex w-full items-center justify-between rounded-xl px-3.5 py-2 text-sm font-medium text-stone-700 transition-all hover:bg-oatmeal-200/70 hover:text-botanical-900 cursor-pointer"
-            >
-              <div className="flex items-center gap-3">
-                <Download className="h-4.5 w-4.5 text-stone-400 group-hover:text-botanical-700" />
-                <span>Data Export</span>
+          {/* Secondary Navigation (Admin Tools) */}
+          {isAdmin && (
+            <>
+              <div className="mt-6 px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
+                Admin Tools
               </div>
-              <span className="text-xs text-stone-400">CSV/JSON</span>
-            </button>
-          </div>
+              <div className="space-y-1">
+                <button
+                  onClick={handleExportClick}
+                  className="group flex w-full items-center justify-between rounded-xl px-3.5 py-2 text-sm font-medium text-stone-700 transition-all hover:bg-oatmeal-200/70 hover:text-botanical-900 cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <Download className="h-4.5 w-4.5 text-stone-400 group-hover:text-botanical-700" />
+                    <span>Data Export</span>
+                  </div>
+                  <span className="text-xs text-stone-400">CSV/JSON</span>
+                </button>
+              </div>
+            </>
+          )}
 
           {/* Settings Group */}
           <div className="mt-6 px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
@@ -300,7 +329,7 @@ export function Sidebar({
         </div>
       </div>
 
-      {/* Bottom Profile Section with Clean Admin Card */}
+      {/* Bottom Profile Section with Clean User Card */}
       <div className="border-t border-stone-200/80 p-3 mt-auto shrink-0 bg-[#FCFBF8] relative">
         {profileMenuOpen && (
           <div className="absolute bottom-full left-3 right-3 mb-2 rounded-2xl border border-stone-200 bg-[#FCFBF8] p-3 shadow-xl z-50 animate-in fade-in slide-in-from-bottom-2 duration-150">
@@ -309,8 +338,11 @@ export function Sidebar({
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">
                   Logged In As
                 </span>
-                <Badge variant="terracotta" className="text-[10px] uppercase font-bold">
-                  ADMIN
+                <Badge
+                  variant={isAdmin ? "terracotta" : "sage"}
+                  className="text-[10px] uppercase font-bold"
+                >
+                  {userRole}
                 </Badge>
               </div>
               <p className="text-xs font-bold text-botanical-900 truncate">{userName}</p>
@@ -332,9 +364,9 @@ export function Sidebar({
           onClick={() => setProfileMenuOpen(!profileMenuOpen)}
           className="flex items-center gap-3 rounded-xl bg-oatmeal-100/90 p-2.5 transition-colors cursor-pointer hover:bg-oatmeal-200/90"
         >
-          {session?.user?.image ? (
+          {currentUser?.image ? (
             <img
-              src={session.user.image}
+              src={currentUser.image}
               alt={userName}
               className="h-9 w-9 rounded-lg object-cover shadow-xs border border-stone-200/80"
             />
@@ -350,8 +382,8 @@ export function Sidebar({
               </p>
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
             </div>
-            <p className="truncate text-[11px] text-stone-500">
-              Administrator
+            <p className="truncate text-[11px] text-stone-500 capitalize">
+              {userRole}
             </p>
           </div>
           <Settings className="h-4 w-4 text-stone-400 hover:text-botanical-800" />

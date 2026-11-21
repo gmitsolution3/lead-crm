@@ -1,6 +1,6 @@
 export { cn } from "cn";
 
-export function formatDate(dateString: string | Date): string {
+export function formatDate(dateString: string | number | Date): string {
   const date = new Date(dateString);
   if (isNaN(date.getTime())) return "Recently";
   return new Intl.DateTimeFormat("en-US", {
@@ -10,7 +10,7 @@ export function formatDate(dateString: string | Date): string {
   }).format(date);
 }
 
-export function formatRelativeTime(dateString: string | Date): string {
+export function formatRelativeTime(dateString: string | number | Date): string {
   const date = new Date(dateString);
   const now = new Date();
   const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
