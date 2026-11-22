@@ -73,7 +73,7 @@ import {
   Phone,
   PhoneCall,
   Plus,
-  Sparkles,
+  ScanSearch,
   RotateCcw,
   Search,
   Target,
@@ -815,7 +815,7 @@ export default function LeadsDashboard({
             className="text-xs h-9 text-botanical-800 border-stone-300 hover:border-botanical-600 gap-1.5 cursor-pointer rounded-xl bg-paper"
             title="Launch search extraction for this query in Chrome extension"
           >
-            <Sparkles className="h-3.5 w-3.5 text-terracotta-600" />
+            <ScanSearch className="h-3.5 w-3.5 text-terracotta-600" />
             <span>Extract More Leads</span>
           </Button>
 

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import {
-  Sparkles,
+  ScanSearch,
   Search,
   CheckCircle2,
   AlertCircle,
@@ -109,7 +109,7 @@ export function ExtensionSearchModal({
             {/* Header */}
             <div className="flex items-start gap-3.5 pr-8">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-botanical-700 text-paper shadow-xs shrink-0">
-                <Sparkles className="h-6 w-6 text-sage-200" />
+                <ScanSearch className="h-6 w-6 text-sage-200" />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 mb-1">

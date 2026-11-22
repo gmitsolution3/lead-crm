@@ -32,6 +32,8 @@ import {
   Mail,
   Phone,
   Laptop,
+  Target,
+  TrendingUp,
 } from "lucide-react";
 import type { User } from "@/types";
 
@@ -101,6 +103,32 @@ export default function SettingsDashboard({ user: initialUser }: SettingsDashboa
   const [copiedKey, setCopiedKey] = useState(false);
   const [dailyLimit, setDailyLimit] = useState("500");
 
+  // KPI Settings State
+  const [dailyApproachTarget, setDailyApproachTarget] = useState<number>(25);
+  const [isSavingKpi, setIsSavingKpi] = useState(false);
+  const [kpiFeedback, setKpiFeedback] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+
+  // Fetch live workspace settings
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch("/api/admin/settings");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.settings?.dailyApproachTarget) {
+          setDailyApproachTarget(data.settings.dailyApproachTarget);
+        }
+        if (data.settings?.dailyScrapeLimit) {
+          setDailyLimit(String(data.settings.dailyScrapeLimit));
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch workspace settings", err);
+    }
+  };
+
   // Fetch live user profile from MongoDB via Next.js internal API
   const fetchProfile = async () => {
     try {
@@ -138,7 +166,41 @@ export default function SettingsDashboard({ user: initialUser }: SettingsDashboa
 
   useEffect(() => {
     fetchProfile();
+    fetchSettings();
   }, []);
+
+  // Save KPI Settings
+  const handleSaveKpiTarget = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingKpi(true);
+    setKpiFeedback(null);
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dailyApproachTarget: Number(dailyApproachTarget),
+          dailyScrapeLimit: Number(dailyLimit),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to update target");
+      }
+      setKpiFeedback({
+        type: "success",
+        message: `Daily approach target updated to ${dailyApproachTarget} approaches/day!`,
+      });
+      setTimeout(() => setKpiFeedback(null), 4000);
+    } catch (err: any) {
+      setKpiFeedback({
+        type: "error",
+        message: err.message || "Failed to save settings",
+      });
+    } finally {
+      setIsSavingKpi(false);
+    }
+  };
 
   // Update Profile Info (Name & Phone)
   const handleUpdateProfile = async (e: React.FormEvent) => {
@@ -822,6 +884,93 @@ export default function SettingsDashboard({ user: initialUser }: SettingsDashboa
         {/* SECTION 2: EXTENSION & CRAWLER */}
         {activeSection === "workspace" && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* KPI Target Configuration Card */}
+            <Card className="p-6 border-stone-200 bg-[#FCFBF8] shadow-sm md:col-span-2">
+              <CardHeader className="p-0 pb-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base font-bold text-botanical-900 flex items-center gap-2">
+                    <Target className="h-4.5 w-4.5 text-terracotta-600" />
+                    <span>Daily Approach Target (Moderator KPI)</span>
+                  </CardTitle>
+                  <Badge variant="terracotta" className="text-[10px] uppercase font-bold tracking-wider">
+                    KPI Policy
+                  </Badge>
+                </div>
+                <p className="text-xs text-stone-500">
+                  Set the daily client approach quota required from each moderator. This calibrates the daily progress ring, remaining to-go counters, and team performance charts on the overview dashboard.
+                </p>
+              </CardHeader>
+
+              <CardContent className="p-0">
+                {kpiFeedback && (
+                  <div
+                    className={`mb-4 flex items-center gap-2.5 rounded-xl p-3 text-xs font-medium ${
+                      kpiFeedback.type === "success"
+                        ? "bg-emerald-50 text-emerald-900 border border-emerald-200"
+                        : "bg-red-50 text-red-900 border border-red-200"
+                    }`}
+                  >
+                    {kpiFeedback.type === "success" ? (
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
+                    )}
+                    <span>{kpiFeedback.message}</span>
+                  </div>
+                )}
+
+                <form onSubmit={handleSaveKpiTarget} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-stone-700">
+                        Target Client Approaches / Day (per Moderator)
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          min={1}
+                          max={500}
+                          value={dailyApproachTarget}
+                          onChange={(e) => setDailyApproachTarget(Math.max(1, parseInt(e.target.value) || 1))}
+                          className="bg-[#FCFBF8] border-stone-200 text-xs rounded-xl h-10 font-bold text-botanical-900 pl-3.5 pr-20"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-stone-400 pointer-events-none">
+                          leads / day
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-stone-400">
+                        Standard recommendation: 25 calls/contacts per day.
+                      </p>
+                    </div>
+
+                    <div>
+                      <Button
+                        type="submit"
+                        disabled={isSavingKpi}
+                        className="w-full sm:w-auto px-6 bg-botanical-700 hover:bg-botanical-800 text-paper text-xs h-10 rounded-xl font-medium cursor-pointer shadow-xs"
+                      >
+                        {isSavingKpi ? (
+                          <>
+                            <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                            <span>Saving KPI Target...</span>
+                          </>
+                        ) : (
+                          <span>Update KPI Target</span>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl bg-oatmeal-100/70 border border-stone-200/70 p-3.5 text-xs text-stone-600 flex items-start gap-2.5">
+                    <TrendingUp className="h-4 w-4 text-terracotta-600 shrink-0 mt-0.5" />
+                    <p className="leading-relaxed">
+                      Moderators will see a live progress gauge on their overview dashboard tracking their completed touches against this <strong>{dailyApproachTarget} leads/day</strong> goal, including immediate motivational counts showing how many leads remain to hit quota.
+                    </p>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+
             <Card className="p-6 border-stone-200 bg-[#FCFBF8] shadow-sm md:col-span-2">
               <CardHeader className="p-0 pb-4">
                 <div className="flex items-center justify-between">

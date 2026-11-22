@@ -9,7 +9,7 @@ import {
   Plus,
   PanelLeftClose,
   PanelLeftOpen,
-  Sparkles,
+  ScanSearch,
   Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -154,7 +154,7 @@ export function Header({
               className="inline-flex items-center gap-1.5 h-9 text-xs border-stone-200 text-stone-700 hover:text-botanical-900 hover:border-botanical-600 bg-paper cursor-pointer rounded-xl"
               title="Launch search extraction in Chrome extension"
             >
-              <Sparkles className="h-3.5 w-3.5 text-terracotta-600" />
+              <ScanSearch className="h-3.5 w-3.5 text-terracotta-600" />
               <span>Extract Leads</span>
             </Button>
 

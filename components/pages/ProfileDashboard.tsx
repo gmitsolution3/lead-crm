@@ -23,7 +23,7 @@ import {
   Mail,
   Phone,
   Calendar,
-  Sparkles,
+  ShieldCheck,
 } from "lucide-react";
 import type { User } from "@/types";
 
@@ -334,7 +334,7 @@ export default function ProfileDashboard({ user: initialUser }: ProfileDashboard
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 border-b border-stone-200/80 pb-6">
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-sage-300 bg-sage-50/80 px-3 py-1 text-xs font-semibold text-botanical-800 mb-2">
-            <Sparkles className="h-3.5 w-3.5 text-sage-600" />
+            <ShieldCheck className="h-3.5 w-3.5 text-sage-600" />
             <span>Personal Profile & Identity</span>
           </div>
           <h1 className="font-serif text-3xl font-bold tracking-tight text-botanical-900 md:text-4xl">

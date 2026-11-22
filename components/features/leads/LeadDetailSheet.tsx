@@ -25,7 +25,7 @@ import {
   PhoneCall,
   UserCheck,
   Clock,
-  Sparkles,
+  Pin,
   ChevronDown,
   Trash2,
 } from "lucide-react";
@@ -609,7 +609,7 @@ export function LeadDetailSheet({
                 <div className="relative rounded-2xl border-2 border-botanical-700/80 bg-gradient-to-br from-paper via-white to-oatmeal-100/70 p-4 shadow-sm">
                   <div className="flex items-center justify-between mb-2">
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-botanical-100 text-botanical-900 border border-botanical-300 shadow-2xs">
-                      <Sparkles className="h-3 w-3 text-botanical-700" />
+                      <Pin className="h-3 w-3 text-botanical-700" />
                       Latest Touchpoint
                     </span>
                     <span className="text-[11px] font-medium text-stone-400">

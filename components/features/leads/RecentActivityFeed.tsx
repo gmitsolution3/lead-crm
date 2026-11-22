@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import {
   Activity,
   Clock,
-  Sparkles,
+  Layers,
   ArrowRight,
   Send,
   Tag,
@@ -42,7 +42,7 @@ export function RecentActivityFeed({
       case "enriched":
         return (
           <Badge variant="terracotta" className="text-[11px] gap-1">
-            <Sparkles className="h-3 w-3" /> Enriched
+            <Layers className="h-3 w-3" /> Enriched
           </Badge>
         );
       case "contacted":
