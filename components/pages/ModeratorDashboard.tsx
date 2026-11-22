@@ -1,54 +1,54 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { LeadDetailSheet } from "@/components/features/leads/LeadDetailSheet";
 import { LeadPipelineModal } from "@/components/features/leads/LeadPipelineModal";
-import { useFetch } from "@/hooks";
-import { useSession } from "@/lib/auth-client";
-import { Lead } from "@/types";
-import type { User } from "@/types";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
   Table,
-  TableHeader,
   TableBody,
-  TableHead,
-  TableRow,
   TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { formatDate, formatShortDateTime } from "@/lib/utils";
+import { useFetch } from "@/hooks";
+import { useSession } from "@/lib/auth-client";
+import { formatDate } from "@/lib/utils";
+import type { User } from "@/types";
+import { Lead } from "@/types";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight,
-  Sprout,
-  CalendarClock,
-  CalendarCheck,
   Award,
-  Phone,
-  Mail,
-  Globe,
-  ExternalLink,
-  Clock,
-  Target,
-  ChevronRight,
-  Copy,
+  CalendarCheck,
+  CalendarClock,
   Check,
+  ChevronRight,
+  Clock,
+  Copy,
+  ExternalLink,
+  Flame,
+  Globe,
+  Mail,
+  Phone,
   PhoneCall,
   PhoneForwarded,
-  Flame,
+  Sprout,
+  Target,
   Zap,
-  AlertCircle,
-  ShieldAlert,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
+import React, { useState } from "react";
 
 interface ModeratorDashboardProps {
   user?: User | null;
 }
 
-export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
+export default function ModeratorDashboard({
+  user,
+}: ModeratorDashboardProps) {
   const router = useRouter();
   const { data: session } = useSession();
   const effectiveUser = user || session?.user;
@@ -58,7 +58,9 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
     data: dashboardResponse,
     isLoading,
     refetch: refetchDashboard,
-  } = useFetch<any>("/dashboard/moderator", { userId: effectiveUser?.id });
+  } = useFetch<any>("/dashboard/moderator", {
+    userId: effectiveUser?.id,
+  });
 
   const dashboardData = dashboardResponse?.data;
 
@@ -95,11 +97,14 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
   // Lead detail sheet state
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
+  const [syncFeedback, setSyncFeedback] = useState<string | null>(
+    null,
+  );
 
   // Pipeline modal state for quick call outcome logging
   const [pipelineLead, setPipelineLead] = useState<Lead | null>(null);
-  const [isPipelineModalOpen, setIsPipelineModalOpen] = useState(false);
+  const [isPipelineModalOpen, setIsPipelineModalOpen] =
+    useState(false);
 
   // Copied phone toast feedback
   const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
@@ -115,7 +120,10 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
     }, 2500);
   };
 
-  const handleOpenPipelineModal = (e: React.MouseEvent, lead: Lead) => {
+  const handleOpenPipelineModal = (
+    e: React.MouseEvent,
+    lead: Lead,
+  ) => {
     e.stopPropagation();
     setPipelineLead(lead);
     setIsPipelineModalOpen(true);
@@ -162,7 +170,9 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
             Moderator Operations Center
           </h1>
           <p className="mt-1 text-sm text-stone-600 max-w-2xl">
-            Execute today&apos;s scheduled follow-ups, achieve daily call targets, and reach out to priority uncontacted prospects.
+            Execute today&apos;s scheduled follow-ups, achieve daily
+            call targets, and reach out to priority uncontacted
+            prospects.
           </p>
         </div>
 
@@ -194,7 +204,9 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
             <span className="text-xl font-extrabold text-botanical-900 mt-0.5">
               {totalLeads}
             </span>
-            <span className="text-[10px] text-stone-400">Total in queue</span>
+            <span className="text-[10px] text-stone-400">
+              Total in queue
+            </span>
           </button>
 
           <button
@@ -208,13 +220,17 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
             <span className="text-xl font-extrabold text-terracotta-700 mt-0.5">
               {stageStats.uncontacted}
             </span>
-            <span className="text-[10px] text-stone-400">Ready to approach</span>
+            <span className="text-[10px] text-stone-400">
+              Ready to approach
+            </span>
           </button>
 
           <button
             type="button"
             onClick={() => {
-              const el = document.getElementById("follow-ups-section");
+              const el = document.getElementById(
+                "follow-ups-section",
+              );
               el?.scrollIntoView({ behavior: "smooth" });
             }}
             className={`flex flex-col text-left rounded-xl border p-3 shadow-2xs transition-all cursor-pointer group relative ${
@@ -236,7 +252,9 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
             <span className="text-xl font-extrabold text-amber-900 mt-0.5">
               {todayFollowUps.length}
             </span>
-            <span className="text-[10px] text-amber-700 font-medium">Follow-up calls</span>
+            <span className="text-[10px] text-amber-700 font-medium">
+              Follow-up calls
+            </span>
           </button>
 
           <button
@@ -250,7 +268,9 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
             <span className="text-xl font-extrabold text-botanical-900 mt-0.5">
               {stageStats.called}
             </span>
-            <span className="text-[10px] text-stone-400">Called / In discussion</span>
+            <span className="text-[10px] text-stone-400">
+              Called / In discussion
+            </span>
           </button>
 
           <button
@@ -264,7 +284,9 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
             <span className="text-xl font-extrabold text-emerald-800 mt-0.5">
               {stageStats.interested}
             </span>
-            <span className="text-[10px] text-stone-400">Hot prospects</span>
+            <span className="text-[10px] text-stone-400">
+              Hot prospects
+            </span>
           </button>
 
           <button
@@ -279,14 +301,19 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
             <span className="text-xl font-extrabold text-emerald-900 mt-0.5">
               {stageStats.converted}
             </span>
-            <span className="text-[10px] text-emerald-700 font-medium">Deals closed</span>
+            <span className="text-[10px] text-emerald-700 font-medium">
+              Deals closed
+            </span>
           </button>
         </div>
 
         {/* 2. Core Operational Command Center: Follow-ups Queue + Daily KPI Ring Hub */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left 2 Cols: Today's Scheduled Follow-Up Calls */}
-          <div id="follow-ups-section" className="lg:col-span-2 space-y-4">
+          <div
+            id="follow-ups-section"
+            className="lg:col-span-2 space-y-4"
+          >
             <Card className="rounded-2xl border border-stone-200/90 bg-[#FCFBF8] p-5 shadow-sm space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-stone-200/70 pb-3.5">
                 <div className="flex items-center gap-2.5">
@@ -299,14 +326,19 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
                         Today&apos;s Due Follow-Up Calls
                       </h3>
                       <Badge
-                        variant={todayFollowUps.length > 0 ? "default" : "secondary"}
+                        variant={
+                          todayFollowUps.length > 0
+                            ? "default"
+                            : "secondary"
+                        }
                         className="text-[10px] font-bold"
                       >
                         {todayFollowUps.length} Scheduled
                       </Badge>
                     </div>
                     <p className="text-xs text-stone-500">
-                      Appointments and reminders scheduled for today. Complete calls at their assigned time.
+                      Appointments and reminders scheduled for today.
+                      Complete calls at their assigned time.
                     </p>
                   </div>
                 </div>
@@ -314,10 +346,14 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => router.push("/leads?status=call_later")}
+                  onClick={() =>
+                    router.push("/leads?status=call_later")
+                  }
                   className="text-xs h-8 text-botanical-800 border-stone-200 rounded-xl cursor-pointer"
                 >
-                  <span>View All Scheduled ({stageStats.call_later})</span>
+                  <span>
+                    View All Scheduled ({stageStats.call_later})
+                  </span>
                   <ChevronRight className="h-3 w-3 ml-1" />
                 </Button>
               </div>
@@ -331,7 +367,9 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
                     No follow-ups remaining for today!
                   </h4>
                   <p className="text-xs text-stone-500 max-w-sm mx-auto">
-                    You have cleared all scheduled calls due today. Move to the uncontacted queue below to continue reaching prospects.
+                    You have cleared all scheduled calls due today.
+                    Move to the uncontacted queue below to continue
+                    reaching prospects.
                   </p>
                 </div>
               ) : (
@@ -339,11 +377,12 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
                   {todayFollowUps.map((item, idx) => {
                     const lead = item.lead;
                     const followDate = new Date(item.followUpTs);
-                    const timeFormatted = followDate.toLocaleTimeString("en-US", {
-                      hour: "numeric",
-                      minute: "2-digit",
-                      hour12: true,
-                    });
+                    const timeFormatted =
+                      followDate.toLocaleTimeString("en-US", {
+                        hour: "numeric",
+                        minute: "2-digit",
+                        hour12: true,
+                      });
 
                     return (
                       <div
@@ -353,8 +392,8 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
                           item.isOverdue
                             ? "border-rose-200 bg-rose-50/40 hover:border-rose-400"
                             : item.isDueNow
-                            ? "border-amber-300 bg-amber-50/50 hover:border-amber-400 ring-1 ring-amber-300"
-                            : "border-stone-200/90 bg-paper hover:border-botanical-600"
+                              ? "border-amber-300 bg-amber-50/50 hover:border-amber-400 ring-1 ring-amber-300"
+                              : "border-stone-200/90 bg-paper hover:border-botanical-600"
                         }`}
                       >
                         <div className="min-w-0 flex-1 space-y-1.5">
@@ -376,13 +415,17 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
                               </span>
                             )}
 
-                            <Badge variant="sage" className="text-[10px] px-2 py-0">
+                            <Badge
+                              variant="sage"
+                              className="text-[10px] px-2 py-0"
+                            >
                               {lead.source}
                             </Badge>
 
                             {lead.notes && lead.notes.length > 0 && (
                               <span className="text-[10px] text-stone-500 font-medium">
-                                • {lead.notes.length} touchpoints logged
+                                • {lead.notes.length} touchpoints
+                                logged
                               </span>
                             )}
                           </div>
@@ -393,20 +436,26 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
                             </h4>
                             {!lead.website && (
                               <span className="inline-flex items-center gap-1 rounded-full bg-terracotta-100 px-2 py-0.2 text-[9px] font-bold text-terracotta-800 border border-terracotta-200 shrink-0">
-                                <Target className="h-2.5 w-2.5" /> No Website
+                                <Target className="h-2.5 w-2.5" /> No
+                                Website
                               </span>
                             )}
                           </div>
 
                           {lead.address && (
-                            <p className="text-[11px] text-stone-400 truncate">{lead.address}</p>
+                            <p className="text-[11px] text-stone-400 truncate">
+                              {lead.address}
+                            </p>
                           )}
 
                           {item.lastCallNote && (
                             <div className="rounded-lg bg-oatmeal-100/70 border border-stone-200/60 p-2 text-xs text-stone-600 flex items-start gap-1.5 mt-1">
-                              <span className="font-semibold text-botanical-900 shrink-0">Last note:</span>
+                              <span className="font-semibold text-botanical-900 shrink-0">
+                                Last note:
+                              </span>
                               <span className="italic line-clamp-1 text-stone-700">
-                                &quot;{item.lastCallNote.content}&quot;
+                                &quot;{item.lastCallNote.content}
+                                &quot;
                               </span>
                             </div>
                           )}
@@ -425,7 +474,9 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
                               </a>
                               <button
                                 type="button"
-                                onClick={(e) => handleCopyPhone(e, lead.phone)}
+                                onClick={(e) =>
+                                  handleCopyPhone(e, lead.phone)
+                                }
                                 className="h-8 w-8 rounded-xl border border-stone-200 bg-paper hover:bg-stone-50 flex items-center justify-center text-stone-500 hover:text-stone-700 transition-colors cursor-pointer"
                                 title="Copy phone number"
                               >
@@ -437,12 +488,16 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
                               </button>
                             </div>
                           ) : (
-                            <span className="text-xs italic text-stone-400">No direct phone</span>
+                            <span className="text-xs italic text-stone-400">
+                              No direct phone
+                            </span>
                           )}
 
                           <Button
                             size="sm"
-                            onClick={(e) => handleOpenPipelineModal(e, lead)}
+                            onClick={(e) =>
+                              handleOpenPipelineModal(e, lead)
+                            }
                             className="text-xs h-8 bg-paper hover:bg-stone-100 text-botanical-900 border border-stone-300 font-semibold gap-1.5 cursor-pointer shadow-2xs rounded-xl"
                           >
                             <PhoneForwarded className="h-3.5 w-3.5 text-terracotta-600" />
@@ -469,14 +524,20 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
                     <h3 className="font-serif text-sm font-bold text-botanical-900">
                       Daily Approach Target
                     </h3>
-                    <p className="text-[11px] text-stone-500">Your personal quota today</p>
+                    <p className="text-[11px] text-stone-500">
+                      Your personal quota today
+                    </p>
                   </div>
                 </div>
                 <Badge
-                  variant={kpiStats.isTargetMet ? "default" : "terracotta"}
+                  variant={
+                    kpiStats.isTargetMet ? "default" : "terracotta"
+                  }
                   className="text-[10px] uppercase font-bold tracking-wider"
                 >
-                  {kpiStats.isTargetMet ? "Quota Met! 🎯" : "In Progress"}
+                  {kpiStats.isTargetMet
+                    ? "Quota Met! 🎯"
+                    : "In Progress"}
                 </Badge>
               </div>
 
@@ -500,10 +561,17 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
                       stroke="currentColor"
                       strokeWidth="10"
                       strokeDasharray={2 * Math.PI * 58}
-                      strokeDashoffset={2 * Math.PI * 58 * (1 - kpiStats.progressPercent / 100)}
+                      strokeDashoffset={
+                        2 *
+                        Math.PI *
+                        58 *
+                        (1 - kpiStats.progressPercent / 100)
+                      }
                       strokeLinecap="round"
                       className={`transition-all duration-700 ease-out ${
-                        kpiStats.isTargetMet ? "text-botanical-700" : "text-terracotta-500"
+                        kpiStats.isTargetMet
+                          ? "text-botanical-700"
+                          : "text-terracotta-500"
                       }`}
                       fill="transparent"
                     />
@@ -527,11 +595,13 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
                   ) : (
                     <p className="text-xs font-semibold text-terracotta-700">
                       {kpiStats.remainingToGo} more approach
-                      {kpiStats.remainingToGo === 1 ? "" : "es"} needed today
+                      {kpiStats.remainingToGo === 1 ? "" : "es"}{" "}
+                      needed today
                     </p>
                   )}
                   <p className="text-[11px] text-stone-400">
-                    {Math.round(kpiStats.progressPercent)}% daily target completion
+                    {Math.round(kpiStats.progressPercent)}% daily
+                    target completion
                   </p>
                 </div>
               </div>
@@ -550,33 +620,51 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
                         1,
                         Math.round(
                           kpiStats.remainingToGo /
-                            Math.max(1, Math.min(8, 18 - new Date().getHours()))
-                        )
+                            Math.max(
+                              1,
+                              Math.min(8, 18 - new Date().getHours()),
+                            ),
+                        ),
                       )}{" "}
                       calls/hr needed
                     </span>
                   ) : (
-                    <span className="text-[11px] text-emerald-700 font-bold">Goal complete</span>
+                    <span className="text-[11px] text-emerald-700 font-bold">
+                      Goal complete
+                    </span>
                   )}
                 </div>
                 <p className="text-[11px] text-stone-500 leading-relaxed">
-                  Calls logged through the outcome modal automatically count toward this target.
+                  Calls logged through the outcome modal automatically
+                  count toward this target.
                 </p>
               </div>
 
               {/* Touchpoint Breakdown Counters */}
               <div className="grid grid-cols-3 gap-2 pt-2 border-t border-stone-100 text-center">
                 <div className="rounded-lg bg-oatmeal-100/60 p-2">
-                  <span className="text-xs font-bold text-botanical-900">{kpiStats.calledToday}</span>
-                  <p className="text-[10px] text-stone-500 mt-0.5">Calls</p>
+                  <span className="text-xs font-bold text-botanical-900">
+                    {kpiStats.calledToday}
+                  </span>
+                  <p className="text-[10px] text-stone-500 mt-0.5">
+                    Calls
+                  </p>
                 </div>
                 <div className="rounded-lg bg-emerald-50/60 p-2">
-                  <span className="text-xs font-bold text-emerald-800">{kpiStats.interestedToday}</span>
-                  <p className="text-[10px] text-emerald-700 mt-0.5">Interested</p>
+                  <span className="text-xs font-bold text-emerald-800">
+                    {kpiStats.interestedToday}
+                  </span>
+                  <p className="text-[10px] text-emerald-700 mt-0.5">
+                    Interested
+                  </p>
                 </div>
                 <div className="rounded-lg bg-amber-50/60 p-2">
-                  <span className="text-xs font-bold text-amber-800">{kpiStats.callLaterToday}</span>
-                  <p className="text-[10px] text-amber-700 mt-0.5">Follow-ups</p>
+                  <span className="text-xs font-bold text-amber-800">
+                    {kpiStats.callLaterToday}
+                  </span>
+                  <p className="text-[10px] text-amber-700 mt-0.5">
+                    Follow-ups
+                  </p>
                 </div>
               </div>
             </Card>
@@ -595,7 +683,9 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
                   Next Priority Prospects to Approach
                 </h3>
                 <p className="text-xs text-stone-500">
-                  High-potential uncontacted businesses ready for immediate outreach. Call &amp; log directly to increment today&apos;s KPI.
+                  High-potential uncontacted businesses ready for
+                  immediate outreach. Call &amp; log directly to
+                  increment today&apos;s KPI.
                 </p>
               </div>
             </div>
@@ -606,14 +696,17 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
               onClick={() => router.push("/leads?status=uncontacted")}
               className="text-xs h-8 text-botanical-800 border-stone-200 rounded-xl cursor-pointer"
             >
-              <span>View Full Uncontacted Pool ({stageStats.uncontacted})</span>
+              <span>
+                View Full Uncontacted Pool ({stageStats.uncontacted})
+              </span>
               <ChevronRight className="h-3 w-3 ml-1" />
             </Button>
           </div>
 
           {hotProspects.length === 0 ? (
             <div className="p-6 text-center text-xs text-stone-500">
-              No uncontacted leads with active phone numbers currently in queue. Extract new leads using the Chrome extension!
+              No uncontacted leads with active phone numbers currently
+              in queue. Extract new leads using the Chrome extension!
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
@@ -625,12 +718,16 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
                 >
                   <div>
                     <div className="flex items-center justify-between gap-1 mb-1.5">
-                      <Badge variant="sage" className="text-[9px] px-1.5 py-0 font-medium">
+                      <Badge
+                        variant="sage"
+                        className="text-[9px] px-1.5 py-0 font-medium"
+                      >
                         {lead.source}
                       </Badge>
                       {!lead.website && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-terracotta-100 px-2 py-0.2 text-[9px] font-bold text-terracotta-800 border border-terracotta-200">
-                          <Target className="h-2.5 w-2.5" /> No Website
+                          <Target className="h-2.5 w-2.5" /> No
+                          Website
                         </span>
                       )}
                     </div>
@@ -639,7 +736,9 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
                       {lead.name}
                     </h4>
                     <p className="text-[11px] text-stone-400 truncate mt-0.5">
-                      {lead.address || lead.searchQuery || "Business lead"}
+                      {lead.address ||
+                        lead.searchQuery ||
+                        "Business lead"}
                     </p>
                   </div>
 
@@ -652,11 +751,15 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
                           className="inline-flex items-center gap-1.5 font-bold text-botanical-900 hover:text-botanical-700 truncate"
                         >
                           <Phone className="h-3 w-3 text-sage-600 shrink-0" />
-                          <span className="truncate">{lead.phone}</span>
+                          <span className="truncate">
+                            {lead.phone}
+                          </span>
                         </a>
                         <button
                           type="button"
-                          onClick={(e) => handleCopyPhone(e, lead.phone)}
+                          onClick={(e) =>
+                            handleCopyPhone(e, lead.phone)
+                          }
                           className="p-1 rounded-md text-stone-400 hover:text-stone-600 cursor-pointer"
                           title="Copy number"
                         >
@@ -671,7 +774,9 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
 
                     <Button
                       size="sm"
-                      onClick={(e) => handleOpenPipelineModal(e, lead)}
+                      onClick={(e) =>
+                        handleOpenPipelineModal(e, lead)
+                      }
                       className="w-full text-[11px] h-7 bg-botanical-800 hover:bg-botanical-900 text-paper font-semibold gap-1.5 cursor-pointer shadow-2xs rounded-lg"
                     >
                       <PhoneCall className="h-3 w-3 text-sage-200" />
@@ -693,7 +798,8 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
               Recently Captured Leads
             </h2>
             <p className="text-xs text-stone-500">
-              Displaying the latest leads saved directly from the Chrome extension.
+              Displaying the latest leads saved directly from the
+              Chrome extension.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -717,11 +823,19 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
             <Table>
               <TableHeader>
                 <TableRow className="border-b border-stone-200 bg-oatmeal-200/60 hover:bg-oatmeal-200/60">
-                  <TableHead className="w-[260px]">Business Name</TableHead>
-                  <TableHead className="w-[200px]">Contact Info</TableHead>
-                  <TableHead className="w-[180px]">Website / Status</TableHead>
+                  <TableHead className="w-[260px]">
+                    Business Name
+                  </TableHead>
+                  <TableHead className="w-[200px]">
+                    Contact Info
+                  </TableHead>
+                  <TableHead className="w-[180px]">
+                    Website / Status
+                  </TableHead>
                   <TableHead className="w-[120px]">Source</TableHead>
-                  <TableHead className="w-[90px] text-right">Added</TableHead>
+                  <TableHead className="w-[90px] text-right">
+                    Added
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -762,7 +876,9 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
                           {lead.email ? (
                             <div className="flex items-center gap-1.5 text-stone-700 truncate max-w-[180px]">
                               <Mail className="h-3 w-3 text-sage-600 shrink-0" />
-                              <span className="truncate">{lead.email}</span>
+                              <span className="truncate">
+                                {lead.email}
+                              </span>
                             </div>
                           ) : null}
                           {lead.phone ? (
@@ -772,7 +888,9 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
                             </div>
                           ) : null}
                           {!lead.email && !lead.phone && (
-                            <span className="text-[11px] text-stone-400 italic">No contact info</span>
+                            <span className="text-[11px] text-stone-400 italic">
+                              No contact info
+                            </span>
                           )}
                         </div>
                       </TableCell>
@@ -792,7 +910,10 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
                           >
                             <Globe className="h-3.5 w-3.5 text-sage-600 shrink-0" />
                             <span className="truncate">
-                              {lead.website.replace(/^https?:\/\/(www\.)?/, "")}
+                              {lead.website.replace(
+                                /^https?:\/\/(www\.)?/,
+                                "",
+                              )}
                             </span>
                             <ExternalLink className="h-2.5 w-2.5 text-stone-400 shrink-0" />
                           </a>
@@ -833,7 +954,8 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
         onLeadUpdated={(updated) => {
           if (
             pipelineLead &&
-            (pipelineLead.leadId === updated.leadId || pipelineLead.id === updated.id)
+            (pipelineLead.leadId === updated.leadId ||
+              pipelineLead.id === updated.id)
           ) {
             setPipelineLead(updated);
           }
@@ -852,12 +974,15 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
         onLeadUpdated={(updatedLead) => {
           if (
             selectedLead &&
-            (selectedLead.leadId === updatedLead.leadId || selectedLead.id === updatedLead.id)
+            (selectedLead.leadId === updatedLead.leadId ||
+              selectedLead.id === updatedLead.id)
           ) {
             setSelectedLead(updatedLead);
           }
           refetchDashboard();
-          setSyncFeedback(`Successfully logged call & updated ${updatedLead.name}!`);
+          setSyncFeedback(
+            `Successfully logged call & updated ${updatedLead.name}!`,
+          );
           setTimeout(() => setSyncFeedback(null), 3000);
         }}
       />
