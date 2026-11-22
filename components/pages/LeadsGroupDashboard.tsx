@@ -18,6 +18,7 @@ import {
 import { SearchGroupCard } from "@/components/features/search-groups/SearchGroupCard";
 import { SearchGroupSkeletonGrid } from "@/components/features/search-groups/SearchGroupSkeleton";
 import { LeadFormModal } from "@/components/features/leads/LeadFormModal";
+import { DeleteConfirmModal } from "@/components/ui/delete-confirm-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -30,7 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useFetch } from "@/hooks";
+import { useFetch, useDelete } from "@/hooks";
 import type { User, SearchGroup } from "@/types";
 
 interface LeadsGroupDashboardProps {
@@ -81,6 +82,25 @@ export default function LeadsGroupDashboard({
   const [sortBy, setSortBy] = useState(initialSortBy);
   const [groupForAddLead, setGroupForAddLead] = useState<SearchGroup | null>(null);
   const [isGlobalAddLeadOpen, setIsGlobalAddLeadOpen] = useState(false);
+  const [groupToDelete, setGroupToDelete] = useState<SearchGroup | null>(null);
+  const [isDeleteGroupModalOpen, setIsDeleteGroupModalOpen] = useState(false);
+
+  const { mutateAsync: deleteGroupMutation, isPending: isDeletingGroup } = useDelete(
+    "/search-groups",
+    { invalidateQueries: [["/search-groups"], ["/leads"]] }
+  );
+
+  const handleConfirmDeleteGroup = async () => {
+    if (!groupToDelete) return;
+    try {
+      await deleteGroupMutation(groupToDelete.groupId);
+      setIsDeleteGroupModalOpen(false);
+      setGroupToDelete(null);
+      refetch();
+    } catch (err) {
+      console.error("Failed to delete search group:", err);
+    }
+  };
 
   // Debounce search query so backend isn't spammed while typing
   useEffect(() => {
@@ -493,6 +513,10 @@ export default function LeadsGroupDashboard({
                   potentialCount={potentialCount}
                   onFilterByGroup={handleSelectGroup}
                   onAddLead={(grp) => setGroupForAddLead(grp)}
+                  onDelete={(grp) => {
+                    setGroupToDelete(grp);
+                    setIsDeleteGroupModalOpen(true);
+                  }}
                 />
               </motion.div>
             );
@@ -530,6 +554,27 @@ export default function LeadsGroupDashboard({
         onSuccess={() => {
           refetch();
         }}
+      />
+
+      {/* Delete Search Group Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={isDeleteGroupModalOpen}
+        onClose={() => {
+          if (!isDeletingGroup) {
+            setIsDeleteGroupModalOpen(false);
+            setGroupToDelete(null);
+          }
+        }}
+        onConfirm={handleConfirmDeleteGroup}
+        title="Delete Search Group"
+        description="Are you sure you want to delete this search group? This will permanently remove the group and all captured leads contained within it."
+        itemName={groupToDelete?.query}
+        warningNote={
+          groupToDelete
+            ? `All ${groupToDelete.leadCount ?? (Array.isArray(groupToDelete.leads) ? groupToDelete.leads.length : 0)} leads in this group will be deleted.`
+            : undefined
+        }
+        isDeleting={isDeletingGroup}
       />
     </div>
   );

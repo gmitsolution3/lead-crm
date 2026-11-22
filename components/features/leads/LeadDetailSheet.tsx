@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Sheet,
   SheetContent,
@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Lead } from "@/types";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatDateTime } from "@/lib/utils";
 import {
   Mail,
   Phone,
@@ -26,6 +26,8 @@ import {
   UserCheck,
   Clock,
   Sparkles,
+  ChevronDown,
+  Trash2,
 } from "lucide-react";
 import {
   FacebookIcon,
@@ -39,14 +41,29 @@ interface LeadDetailSheetProps {
   isOpen: boolean;
   onClose: () => void;
   onLeadUpdated?: (lead: Lead) => void;
+  onDeleteLead?: (lead: Lead) => void;
 }
 
 export function LeadDetailSheet({
   lead,
   isOpen,
   onClose,
+  onDeleteLead,
 }: LeadDetailSheetProps) {
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [showOlderNotes, setShowOlderNotes] = useState(false);
+
+  const sortedNotes = useMemo(() => {
+    if (!lead?.notes || lead.notes.length === 0) return [];
+    return [...lead.notes].sort((a, b) => {
+      const timeA = new Date(a.createdAt).getTime();
+      const timeB = new Date(b.createdAt).getTime();
+      return timeB - timeA;
+    });
+  }, [lead?.notes]);
+
+  const latestNote = sortedNotes[0] || null;
+  const olderNotes = sortedNotes.slice(1);
 
   if (!lead) return null;
 
@@ -243,7 +260,7 @@ export function LeadDetailSheet({
                   {lead.followUpDate ? (
                     <>
                       <span className="font-semibold text-stone-800">
-                        {formatDate(lead.followUpDate)}
+                        {formatDateTime(lead.followUpDate)}
                       </span>
                       {isOverdue && (
                         <span className="text-[10px] font-bold text-terracotta-700 bg-terracotta-100 px-1.5 py-0.5 rounded border border-terracotta-200">
@@ -264,11 +281,6 @@ export function LeadDetailSheet({
                 </span>
                 <p className="font-semibold text-botanical-900 truncate">
                   {lead.assignedTo?.name || "Unassigned"}
-                  {lead.assignedTo?.email && (
-                    <span className="font-normal text-stone-500 text-[11px] ml-1">
-                      ({lead.assignedTo.email})
-                    </span>
-                  )}
                 </p>
               </div>
             </div>
@@ -583,40 +595,95 @@ export function LeadDetailSheet({
           </div>
 
           {/* Section: Conversation History Timeline */}
-          <div>
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-botanical-800 mb-3 flex items-center gap-2">
-              <Clock className="h-3.5 w-3.5 text-botanical-600" />
-              Activity & Conversation History ({lead.notes?.length || 0})
-            </h4>
-
-            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-              {lead.notes && lead.notes.length > 0 ? (
-                [...lead.notes].reverse().map((note) => (
-                  <div
-                    key={note.noteId}
-                    className="rounded-xl border border-stone-200/80 bg-paper p-3 text-xs space-y-1 shadow-2xs"
-                  >
-                    <div className="flex items-center justify-between text-[11px] text-stone-400">
-                      <span className="font-semibold text-botanical-800">
-                        {note.createdBy?.name || "Team Member"}
-                      </span>
-                      <span>{formatDate(note.createdAt)}</span>
-                    </div>
-                    <p className="text-stone-700 whitespace-pre-wrap leading-relaxed">
-                      {note.content}
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <p className="text-xs text-stone-400 italic py-1">
-                  No conversation logs recorded yet.
-                </p>
-              )}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-botanical-800 flex items-center gap-2">
+                <Clock className="h-3.5 w-3.5 text-botanical-600" />
+                Activity & Conversation History ({lead.notes?.length || 0})
+              </h4>
             </div>
+
+            {latestNote ? (
+              <div className="space-y-3">
+                {/* Standout Highlight Card for the Latest Touchpoint */}
+                <div className="relative rounded-2xl border-2 border-botanical-700/80 bg-gradient-to-br from-paper via-white to-oatmeal-100/70 p-4 shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-botanical-100 text-botanical-900 border border-botanical-300 shadow-2xs">
+                      <Sparkles className="h-3 w-3 text-botanical-700" />
+                      Latest Touchpoint
+                    </span>
+                    <span className="text-[11px] font-medium text-stone-400">
+                      {formatDate(latestNote.createdAt)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 mb-2.5">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-botanical-700 text-paper text-[10px] font-bold shrink-0">
+                      {(latestNote.createdBy?.name || "U").charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-xs font-semibold text-botanical-900">
+                        {latestNote.createdBy?.name || "Team Member"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-stone-800 whitespace-pre-wrap leading-relaxed pl-2.5 border-l-2 border-botanical-500 font-medium bg-oatmeal-100/40 p-2 rounded-r-lg">
+                    {latestNote.content}
+                  </p>
+                </div>
+
+                {/* Collapsible Container for Older Notes */}
+                {olderNotes.length > 0 && (
+                  <div className="space-y-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowOlderNotes((prev) => !prev)}
+                      className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-oatmeal-100/70 hover:bg-oatmeal-200/70 text-xs font-semibold text-stone-700 border border-stone-200/80 transition-colors cursor-pointer"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5 text-stone-500" />
+                        <span>Earlier Conversations ({olderNotes.length})</span>
+                      </span>
+                      <ChevronDown
+                        className={`h-4 w-4 text-stone-500 transition-transform duration-200 ${
+                          showOlderNotes ? "rotate-180" : ""
+                        }`}
+                      />
+                    </button>
+
+                    {showOlderNotes && (
+                      <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                        {olderNotes.map((note) => (
+                          <div
+                            key={note.noteId}
+                            className="rounded-xl border border-stone-200/80 bg-paper p-3 text-xs space-y-1 shadow-2xs"
+                          >
+                            <div className="flex items-center justify-between text-[11px] text-stone-400">
+                              <span className="font-semibold text-stone-700">
+                                {note.createdBy?.name || "Team Member"}
+                              </span>
+                              <span>{formatDate(note.createdAt)}</span>
+                            </div>
+                            <p className="text-stone-600 whitespace-pre-wrap leading-relaxed">
+                              {note.content}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-xs text-stone-400 italic py-2">
+                No conversation logs recorded yet.
+              </p>
+            )}
           </div>
 
           {/* Metadata Footer */}
-          <div className="pt-4 border-t border-stone-200 flex flex-col gap-1 text-[11px] text-stone-400">
+          <div className="pt-4 border-t border-stone-200 flex flex-col gap-2 text-[11px] text-stone-400">
             <div className="flex justify-between">
               <span>Group Association:</span>
               <span className="text-stone-600">{lead.groupId}</span>
@@ -625,6 +692,18 @@ export function LeadDetailSheet({
               <span>Last Modified:</span>
               <span>{formatDate(lead.updatedAt)}</span>
             </div>
+            {onDeleteLead && (
+              <div className="pt-3 border-t border-stone-100 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => onDeleteLead(lead)}
+                  className="inline-flex items-center gap-1.5 text-xs text-rose-600 hover:text-rose-800 hover:bg-rose-50 px-3 py-1.5 rounded-xl border border-rose-200 transition-colors cursor-pointer font-medium"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>Delete This Lead</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </SheetContent>

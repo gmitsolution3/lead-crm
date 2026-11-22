@@ -7,6 +7,7 @@ import {
   ArrowRight,
   Target,
   Plus,
+  Trash2,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +21,7 @@ interface SearchGroupCardProps {
   potentialCount?: number;
   onFilterByGroup: (query: string) => void;
   onAddLead?: (group: SearchGroup) => void;
+  onDelete?: (group: SearchGroup) => void;
 }
 
 export function SearchGroupCard({
@@ -28,6 +30,7 @@ export function SearchGroupCard({
   potentialCount = 0,
   onFilterByGroup,
   onAddLead,
+  onDelete,
 }: SearchGroupCardProps) {
   return (
     <Card
@@ -95,18 +98,20 @@ export function SearchGroupCard({
           Source: Extension crawler
         </span>
         <div className="flex items-center gap-1.5">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              onFilterByGroup(group.groupId || group.query);
-            }}
-            className="text-xs font-semibold text-botanical-800 hover:text-botanical-900 hover:bg-sage-100/70 gap-1.5 rounded-xl h-8 px-3 cursor-pointer"
-          >
-            <span>View Leads</span>
-            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
-          </Button>
+          {onDelete && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(group);
+              }}
+              className="h-8 w-8 text-stone-400 hover:text-rose-700 hover:bg-rose-50 rounded-xl cursor-pointer transition-colors"
+              title={`Delete search group "${group.query}"`}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          )}
           {onAddLead && (
             <Button
               variant="outline"
@@ -122,6 +127,18 @@ export function SearchGroupCard({
               <span>Add Lead</span>
             </Button>
           )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onFilterByGroup(group.groupId || group.query);
+            }}
+            className="text-xs font-semibold text-botanical-800 hover:text-botanical-900 hover:bg-sage-100/70 gap-1.5 rounded-xl h-8 px-3 cursor-pointer"
+          >
+            <span>View Leads</span>
+            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+          </Button>
         </div>
       </div>
     </Card>

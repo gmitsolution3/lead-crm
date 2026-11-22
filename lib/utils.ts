@@ -10,6 +10,31 @@ export function formatDate(dateString: string | number | Date): string {
   }).format(date);
 }
 
+export function formatDateTime(dateString: string | number | Date): string {
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "Recently";
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(date);
+}
+
+export function formatShortDateTime(dateString: string | number | Date): string {
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "Recently";
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(date);
+}
+
 export function formatRelativeTime(dateString: string | number | Date): string {
   const date = new Date(dateString);
   const now = new Date();

@@ -31,6 +31,11 @@ export function LeadTableSkeletonRows({
               </div>
             </TableCell>
 
+            {/* Status */}
+            <TableCell className="px-4 py-3.5">
+              <Skeleton className="h-6 w-24 rounded-full" />
+            </TableCell>
+
             {/* Contact Stack */}
             <TableCell className="px-4 py-3.5">
               <div className="space-y-1.5">
@@ -39,34 +44,30 @@ export function LeadTableSkeletonRows({
               </div>
             </TableCell>
 
-            {/* Website Status */}
+            {/* Priority & Follow-Up */}
+            <TableCell className="px-4 py-3.5">
+              <div className="space-y-1.5">
+                <Skeleton className="h-4 w-16 rounded" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+            </TableCell>
+
+            {/* Dealt By */}
+            <TableCell className="px-4 py-3.5">
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-6 w-6 rounded-full shrink-0" />
+                <Skeleton className="h-3.5 w-20" />
+              </div>
+            </TableCell>
+
+            {/* Website Status / Opportunity */}
             <TableCell className="px-4 py-3.5">
               <Skeleton className="h-5 w-28 rounded-full" />
             </TableCell>
 
-            {/* Source */}
-            <TableCell className="px-4 py-3.5">
-              <Skeleton className="h-5 w-20 rounded-full" />
-            </TableCell>
-
-            {/* Search Query */}
-            <TableCell className="px-4 py-3.5">
-              <Skeleton className="h-5 w-28 rounded-md" />
-            </TableCell>
-
-            {/* Social Icons */}
-            <TableCell className="px-4 py-3.5">
-              <div className="flex items-center justify-center gap-1.5">
-                <Skeleton className="h-7 w-7 rounded-lg" />
-                <Skeleton className="h-7 w-7 rounded-lg" />
-                <Skeleton className="h-7 w-7 rounded-lg" />
-                <Skeleton className="h-7 w-7 rounded-lg" />
-              </div>
-            </TableCell>
-
-            {/* Date */}
-            <TableCell className="px-4 py-3.5 text-right">
-              <Skeleton className="h-3.5 w-16 ml-auto" />
+            {/* Actions */}
+            <TableCell className="px-4 py-3.5 text-center">
+              <Skeleton className="h-7 w-7 rounded-lg mx-auto" />
             </TableCell>
           </TableRow>
         );

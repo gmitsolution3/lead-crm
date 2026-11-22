@@ -37,17 +37,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useFetch, usePatch } from "@/hooks";
-import { formatDate } from "@/lib/utils";
+import { useFetch, usePatch, useDelete } from "@/hooks";
+import { cn, formatDate, formatShortDateTime } from "@/lib/utils";
 import { useSession } from "@/lib/auth-client";
+import { isStatusTransitionAllowed } from "@/lib/lead-pipeline";
 import type { User, LeadStatus, LeadPriority } from "@/types";
 import { Lead, SearchGroup } from "@/types";
 import { LeadFormModal } from "@/components/features/leads/LeadFormModal";
+import { DeleteConfirmModal } from "@/components/ui/delete-confirm-modal";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft,
   ArrowUpDown,
-  Calendar,
+  Calendar as CalendarIcon,
   CheckCircle2,
   Clock,
   Download,
@@ -67,11 +71,135 @@ import {
   RotateCcw,
   Search,
   Target,
+  Trash2,
   UserCheck,
   Users,
 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+
+// ==========================================
+// UI Badge Utilities (Placed outside component)
+// ==========================================
+
+export const getStatusBadge = (status?: LeadStatus) => {
+  switch (status) {
+    case "called":
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-800 border border-amber-300 shadow-2xs hover:bg-amber-200 transition-colors">
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-600" />
+          Called
+        </span>
+      );
+    case "call_later":
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-100 text-blue-800 border border-blue-300 shadow-2xs hover:bg-blue-200 transition-colors">
+          <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />
+          Call Later
+        </span>
+      );
+    case "interested":
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs hover:bg-emerald-200 transition-colors">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
+          Interested 🔥
+        </span>
+      );
+    case "not_interested":
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-100 text-rose-800 border border-rose-300 shadow-2xs hover:bg-rose-200 transition-colors">
+          <span className="h-1.5 w-1.5 rounded-full bg-rose-600" />
+          Not Interested
+        </span>
+      );
+    case "converted":
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-green-100 text-green-900 border border-green-300 shadow-2xs hover:bg-green-200 transition-colors">
+          <span className="h-1.5 w-1.5 rounded-full bg-green-700" />
+          Converted 🎉
+        </span>
+      );
+    case "invalid":
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-zinc-200 text-zinc-700 border border-zinc-300 shadow-2xs hover:bg-zinc-300 transition-colors">
+          <span className="h-1.5 w-1.5 rounded-full bg-zinc-500" />
+          Invalid
+        </span>
+      );
+    default:
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-stone-100 text-stone-700 border border-stone-300 shadow-2xs hover:bg-stone-200 transition-colors">
+          <span className="h-1.5 w-1.5 rounded-full bg-stone-400" />
+          Uncontacted
+        </span>
+      );
+  }
+};
+
+export const getPriorityBadge = (priority?: LeadPriority) => {
+  switch (priority) {
+    case "high":
+      return (
+        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+          🔥 High
+        </span>
+      );
+    case "low":
+      return (
+        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] font-semibold bg-stone-100 text-stone-600 border border-stone-200">
+          ❄️ Low
+        </span>
+      );
+    default:
+      return (
+        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+          ⚡ Med
+        </span>
+      );
+  }
+};
+
+export const getSourceBadge = (source: string) => {
+  const s = source.toLowerCase();
+  if (s.includes("google") || s.includes("maps")) {
+    return (
+      <Badge
+        variant="sage"
+        className="rounded-full px-2 py-0.2 text-[10px] font-medium"
+      >
+        {source}
+      </Badge>
+    );
+  }
+  if (s.includes("instagram") || s.includes("facebook")) {
+    return (
+      <Badge
+        variant="terracotta"
+        className="rounded-full px-2 py-0.2 text-[10px] font-medium"
+      >
+        {source}
+      </Badge>
+    );
+  }
+  if (s.includes("linkedin")) {
+    return (
+      <Badge
+        variant="default"
+        className="rounded-full px-2 py-0.2 text-[10px] font-medium"
+      >
+        {source}
+      </Badge>
+    );
+  }
+  return (
+    <Badge
+      variant="secondary"
+      className="rounded-full px-2 py-0.2 text-[10px] font-medium"
+    >
+      {source}
+    </Badge>
+  );
+};
 
 interface LeadsDashboardProps {
   user?: User | null;
@@ -275,6 +403,15 @@ export default function LeadsDashboard({
     leadId: string,
     newStatus: LeadStatus,
   ) => {
+    const currentLead = leads.find((l) => l.leadId === leadId);
+    if (currentLead && !isStatusTransitionAllowed(currentLead.status, newStatus)) {
+      setSyncFeedback(
+        `Cannot change status from "${(currentLead.status || "uncontacted").replace("_", " ")}" to "${newStatus.replace("_", " ")}"`
+      );
+      setTimeout(() => setSyncFeedback(null), 3500);
+      return;
+    }
+
     try {
       await updateLeadMutation({
         id: leadId,
@@ -298,81 +435,47 @@ export default function LeadsDashboard({
     }
   };
 
-  const getStatusBadge = (status?: LeadStatus) => {
-    switch (status) {
-      case "called":
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-800 border border-amber-300 shadow-2xs hover:bg-amber-200 transition-colors">
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-600" />
-            Called
-          </span>
-        );
-      case "call_later":
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-100 text-blue-800 border border-blue-300 shadow-2xs hover:bg-blue-200 transition-colors">
-            <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />
-            Call Later
-          </span>
-        );
-      case "interested":
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs hover:bg-emerald-200 transition-colors">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
-            Interested 🔥
-          </span>
-        );
-      case "not_interested":
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-100 text-rose-800 border border-rose-300 shadow-2xs hover:bg-rose-200 transition-colors">
-            <span className="h-1.5 w-1.5 rounded-full bg-rose-600" />
-            Not Interested
-          </span>
-        );
-      case "converted":
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-green-100 text-green-900 border border-green-300 shadow-2xs hover:bg-green-200 transition-colors">
-            <span className="h-1.5 w-1.5 rounded-full bg-green-700" />
-            Converted 🎉
-          </span>
-        );
-      case "invalid":
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-zinc-200 text-zinc-700 border border-zinc-300 shadow-2xs hover:bg-zinc-300 transition-colors">
-            <span className="h-1.5 w-1.5 rounded-full bg-zinc-500" />
-            Invalid
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-stone-100 text-stone-700 border border-stone-300 shadow-2xs hover:bg-stone-200 transition-colors">
-            <span className="h-1.5 w-1.5 rounded-full bg-stone-400" />
-            Uncontacted
-          </span>
-        );
+  const [activeFollowUpLeadId, setActiveFollowUpLeadId] = useState<string | null>(null);
+  const [activeFollowUpTime, setActiveFollowUpTime] = useState<string>("10:00");
+
+  const handleQuickFollowUpChange = async (
+    leadId: string,
+    newFollowUpDate: number | null,
+  ) => {
+    setActiveFollowUpLeadId(null);
+    try {
+      await updateLeadMutation({
+        id: leadId,
+        data: {
+          followUpDate: newFollowUpDate,
+          groupId: targetGroupId,
+          updatedBy: session?.user
+            ? {
+                userId: session.user.id,
+                name: session.user.name,
+                email: session.user.email,
+              }
+            : undefined,
+        },
+      });
+      refetchLeads();
+      setSyncFeedback(
+        newFollowUpDate
+          ? `Follow-up set to ${formatShortDateTime(newFollowUpDate)}`
+          : "Follow-up date cleared"
+      );
+      setTimeout(() => setSyncFeedback(null), 2500);
+    } catch (err) {
+      console.error("Failed to update follow-up date:", err);
     }
   };
 
-  const getPriorityBadge = (priority?: LeadPriority) => {
-    switch (priority) {
-      case "high":
-        return (
-          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
-            🔥 High
-          </span>
-        );
-      case "low":
-        return (
-          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] font-semibold bg-stone-100 text-stone-600 border border-stone-200">
-            ❄️ Low
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-            ⚡ Med
-          </span>
-        );
-    }
+  const handleQuickPresetDate = (leadId: string, daysFromNow: number) => {
+    const targetDate = new Date();
+    targetDate.setDate(targetDate.getDate() + daysFromNow);
+    const [h, m] = activeFollowUpTime.split(":").map(Number);
+    targetDate.setHours(isNaN(h) ? 10 : h, isNaN(m) ? 0 : m, 0, 0);
+    handleQuickFollowUpChange(leadId, targetDate.getTime());
   };
 
   // Separate Modal states: View Details, Pipeline & Status, Activity & Notes
@@ -384,6 +487,21 @@ export default function LeadsDashboard({
 
   const [selectedLeadForNotes, setSelectedLeadForNotes] = useState<Lead | null>(null);
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
+
+  // Delete lead state & mutation
+  const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
+  const [isDeleteLeadModalOpen, setIsDeleteLeadModalOpen] = useState(false);
+  const { mutateAsync: deleteLeadMutation, isPending: isDeletingLead } = useDelete(
+    "/leads",
+    { invalidateQueries: [["/leads"], ["/search-groups"]] }
+  );
+
+  // Delete group state & mutation
+  const [isDeleteGroupModalOpen, setIsDeleteGroupModalOpen] = useState(false);
+  const { mutateAsync: deleteGroupMutation, isPending: isDeletingGroup } = useDelete(
+    "/search-groups",
+    { invalidateQueries: [["/search-groups"], ["/leads"]] }
+  );
 
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
 
@@ -402,6 +520,31 @@ export default function LeadsDashboard({
     setIsNotesModalOpen(true);
   };
 
+  const handleConfirmDeleteLead = async () => {
+    if (!leadToDelete) return;
+    try {
+      await deleteLeadMutation(leadToDelete.leadId);
+      setIsDeleteLeadModalOpen(false);
+      setLeadToDelete(null);
+      refetchLeads();
+      refetchGroup();
+      setSyncFeedback("Lead deleted successfully");
+      setTimeout(() => setSyncFeedback(null), 3000);
+    } catch (err) {
+      console.error("Failed to delete lead:", err);
+    }
+  };
+
+  const handleConfirmDeleteGroup = async () => {
+    try {
+      await deleteGroupMutation(targetGroupId);
+      setIsDeleteGroupModalOpen(false);
+      router.push("/leads");
+    } catch (err) {
+      console.error("Failed to delete search group:", err);
+    }
+  };
+
   // Unique sources for filter dropdown
   const uniqueSources = useMemo(() => {
     const set = new Set<string>([
@@ -412,48 +555,6 @@ export default function LeadsDashboard({
     leads.forEach((l) => set.add(l.source));
     return Array.from(set);
   }, [leads]);
-
-  const getSourceBadge = (source: string) => {
-    const s = source.toLowerCase();
-    if (s.includes("google") || s.includes("maps")) {
-      return (
-        <Badge
-          variant="sage"
-          className="rounded-full px-2.5 py-0.5 text-xs font-medium"
-        >
-          {source}
-        </Badge>
-      );
-    }
-    if (s.includes("instagram") || s.includes("facebook")) {
-      return (
-        <Badge
-          variant="terracotta"
-          className="rounded-full px-2.5 py-0.5 text-xs font-medium"
-        >
-          {source}
-        </Badge>
-      );
-    }
-    if (s.includes("linkedin")) {
-      return (
-        <Badge
-          variant="default"
-          className="rounded-full px-2.5 py-0.5 text-xs font-medium"
-        >
-          {source}
-        </Badge>
-      );
-    }
-    return (
-      <Badge
-        variant="secondary"
-        className="rounded-full px-2.5 py-0.5 text-xs font-medium"
-      >
-        {source}
-      </Badge>
-    );
-  };
 
   const handleExportCSV = useCallback(() => {
     const leadsToExport: Lead[] = group?.leads || leads || [];
@@ -614,6 +715,17 @@ export default function LeadsDashboard({
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsDeleteGroupModalOpen(true)}
+            className="text-xs h-9 text-rose-700 hover:text-rose-800 hover:bg-rose-50 border-rose-200/90 gap-1.5 cursor-pointer rounded-xl"
+            title="Delete this search group and all its leads"
+          >
+            <Trash2 className="h-3.5 w-3.5 text-rose-600" />
+            <span>Delete Group</span>
+          </Button>
+
           <Button
             variant="outline"
             size="sm"
@@ -802,7 +914,7 @@ export default function LeadsDashboard({
               >
                 <SelectTrigger className="h-9 text-xs bg-oatmeal-100/60 border-stone-200 text-stone-700 rounded-xl">
                   <div className="flex items-center gap-1.5">
-                    <Calendar className="h-3 w-3 text-stone-500 shrink-0" />
+                    <CalendarIcon className="h-3 w-3 text-stone-500 shrink-0" />
                     <SelectValue placeholder="Follow-Up: All" />
                   </div>
                 </SelectTrigger>
@@ -936,38 +1048,29 @@ export default function LeadsDashboard({
         </div>
 
         {/* Warm-toned Zebra Striped Table Card */}
-        <div className="rounded-2xl border border-stone-200/90 bg-[#FCFBF8] shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+        <div className="rounded-2xl border border-stone-200/90 bg-[#FCFBF8] shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-x-auto scrollbar-thin scrollbar-thumb-stone-300 scrollbar-track-stone-100">
           <Table>
             <TableHeader>
               <TableRow className="border-b border-stone-200 bg-oatmeal-200/60 hover:bg-oatmeal-200/60">
-                <TableHead className="w-[210px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
+                <TableHead className="min-w-[220px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
                   Lead / Business
                 </TableHead>
-                <TableHead className="w-[125px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
+                <TableHead className="w-[130px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
                   Status
                 </TableHead>
-                <TableHead className="w-[170px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
+                <TableHead className="min-w-[170px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
                   Contact Coordinates
                 </TableHead>
-                <TableHead className="w-[155px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
+                <TableHead className="min-w-[160px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
                   Priority & Follow-Up
                 </TableHead>
-                <TableHead className="w-[125px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
+                <TableHead className="w-[130px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
                   Dealt By
                 </TableHead>
-                <TableHead className="w-[135px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
+                <TableHead className="min-w-[150px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
                   Website / Opportunity
                 </TableHead>
-                <TableHead className="w-[95px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
-                  Source
-                </TableHead>
-                <TableHead className="w-[105px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600 text-center">
-                  Social Links
-                </TableHead>
-                <TableHead className="w-[75px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600 text-right">
-                  Added
-                </TableHead>
-                <TableHead className="w-[55px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600 text-center">
+                <TableHead className="w-[60px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600 text-center">
                   Actions
                 </TableHead>
               </TableRow>
@@ -977,7 +1080,7 @@ export default function LeadsDashboard({
                 <LeadTableSkeletonRows rows={limit > 10 ? 10 : limit} />
               ) : leads.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="p-8 sm:p-12 text-center">
+                  <TableCell colSpan={7} className="p-8 sm:p-12 text-center">
                     <EmptyState
                       compact
                       icon={hasActiveFilters ? FilterX : Users}
@@ -1019,7 +1122,7 @@ export default function LeadsDashboard({
                         isEven ? "bg-oatmeal-100/40" : "bg-paper"
                       } hover:bg-sage-100/50`}
                     >
-                      {/* Name Column */}
+                      {/* Name & Source Column */}
                       <TableCell className="px-4 py-3.5 font-medium">
                         <div className="flex items-center gap-3">
                           <div
@@ -1035,9 +1138,13 @@ export default function LeadsDashboard({
                             <p className="font-semibold text-botanical-900 truncate hover:text-botanical-700 transition-colors">
                               {lead.name}
                             </p>
-                            <p className="text-[11px] text-stone-400 truncate max-w-[180px]">
-                              {lead.address || "No address"}
-                            </p>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span className="text-[11px] text-stone-400 truncate max-w-[140px]">
+                                {lead.address || "No address"}
+                              </span>
+                              <span className="text-stone-300">•</span>
+                              {getSourceBadge(lead.source)}
+                            </div>
                           </div>
                         </div>
                       </TableCell>
@@ -1058,70 +1165,112 @@ export default function LeadsDashboard({
                               </button>
                             }
                           />
-                          <DropdownMenuContent align="start" className="w-48 p-1">
+                          <DropdownMenuContent align="start" className="w-52 p-1">
                             <DropdownMenuItem
+                              disabled={!isStatusTransitionAllowed(lead.status, "uncontacted")}
                               onClick={() =>
                                 handleQuickStatusChange(
                                   lead.leadId,
                                   "uncontacted",
                                 )
                               }
+                              className={
+                                !isStatusTransitionAllowed(lead.status, "uncontacted")
+                                  ? "opacity-40 cursor-not-allowed text-stone-400"
+                                  : ""
+                              }
                             >
-                              🔵 Uncontacted (New)
+                              <span>🔵 Uncontacted (New)</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem
+                              disabled={!isStatusTransitionAllowed(lead.status, "called")}
                               onClick={() =>
                                 handleQuickStatusChange(lead.leadId, "called")
                               }
+                              className={
+                                !isStatusTransitionAllowed(lead.status, "called")
+                                  ? "opacity-40 cursor-not-allowed text-stone-400"
+                                  : ""
+                              }
                             >
-                              📞 Called (Attempted)
+                              <span>📞 Called (Attempted)</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem
+                              disabled={!isStatusTransitionAllowed(lead.status, "call_later")}
                               onClick={() =>
                                 handleQuickStatusChange(
                                   lead.leadId,
                                   "call_later",
                                 )
                               }
+                              className={
+                                !isStatusTransitionAllowed(lead.status, "call_later")
+                                  ? "opacity-40 cursor-not-allowed text-stone-400"
+                                  : ""
+                              }
                             >
-                              ⏰ Call Later
+                              <span>⏰ Call Later</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem
+                              disabled={!isStatusTransitionAllowed(lead.status, "interested")}
                               onClick={() =>
                                 handleQuickStatusChange(
                                   lead.leadId,
                                   "interested",
                                 )
                               }
+                              className={
+                                !isStatusTransitionAllowed(lead.status, "interested")
+                                  ? "opacity-40 cursor-not-allowed text-stone-400"
+                                  : ""
+                              }
                             >
-                              🔥 Interested (Hot)
+                              <span>🔥 Interested (Hot)</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem
+                              disabled={!isStatusTransitionAllowed(lead.status, "not_interested")}
                               onClick={() =>
                                 handleQuickStatusChange(
                                   lead.leadId,
                                   "not_interested",
                                 )
                               }
+                              className={
+                                !isStatusTransitionAllowed(lead.status, "not_interested")
+                                  ? "opacity-40 cursor-not-allowed text-stone-400"
+                                  : ""
+                              }
                             >
-                              🚫 Not Interested
+                              <span>🚫 Not Interested</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem
+                              disabled={!isStatusTransitionAllowed(lead.status, "converted")}
                               onClick={() =>
                                 handleQuickStatusChange(
                                   lead.leadId,
                                   "converted",
                                 )
                               }
+                              className={
+                                !isStatusTransitionAllowed(lead.status, "converted")
+                                  ? "opacity-40 cursor-not-allowed text-stone-400"
+                                  : ""
+                              }
                             >
-                              🎉 Converted (Won)
+                              <span>🎉 Converted (Won)</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem
+                              disabled={!isStatusTransitionAllowed(lead.status, "invalid")}
                               onClick={() =>
                                 handleQuickStatusChange(lead.leadId, "invalid")
                               }
+                              className={
+                                !isStatusTransitionAllowed(lead.status, "invalid")
+                                  ? "opacity-40 cursor-not-allowed text-stone-400"
+                                  : ""
+                              }
                             >
-                              ❌ Invalid / Dead
+                              <span>❌ Invalid / Dead</span>
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -1154,8 +1303,11 @@ export default function LeadsDashboard({
                         </div>
                       </TableCell>
 
-                      {/* Priority & Follow-Up */}
-                      <TableCell className="px-4 py-3.5">
+                      {/* Priority & Follow-Up with Direct Calendar Popover */}
+                      <TableCell
+                        className="px-4 py-3.5"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <div className="flex flex-col gap-1 text-xs">
                           <div className="flex items-center gap-1.5">
                             {getPriorityBadge(lead.priority)}
@@ -1165,29 +1317,187 @@ export default function LeadsDashboard({
                               </span>
                             ) : null}
                           </div>
-                          {lead.followUpDate ? (
-                            <div className="flex items-center gap-1 text-[11px]">
-                              <Calendar className="h-3 w-3 text-stone-400 shrink-0" />
-                              {lead.followUpDate < Date.now() &&
-                              ![
-                                "converted",
-                                "not_interested",
-                                "invalid",
-                              ].includes(lead.status || "") ? (
-                                <span className="font-bold text-terracotta-700 bg-terracotta-100 px-1.5 py-0.2 rounded">
-                                  Overdue
-                                </span>
-                              ) : (
-                                <span className="text-stone-600">
-                                  {formatDate(lead.followUpDate)}
-                                </span>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-[10px] text-stone-400 italic">
-                              No follow-up set
-                            </span>
-                          )}
+
+                          {/* Quick Follow-Up Calendar Popover */}
+                          <Popover
+                            open={activeFollowUpLeadId === lead.leadId}
+                            onOpenChange={(open) => {
+                              if (open) {
+                                setActiveFollowUpLeadId(lead.leadId);
+                                if (lead.followUpDate) {
+                                  const d = new Date(lead.followUpDate);
+                                  const hh = String(d.getHours()).padStart(2, "0");
+                                  const mm = String(d.getMinutes()).padStart(2, "0");
+                                  setActiveFollowUpTime(`${hh}:${mm}`);
+                                } else {
+                                  setActiveFollowUpTime("10:00");
+                                }
+                              } else {
+                                setActiveFollowUpLeadId(null);
+                              }
+                            }}
+                          >
+                            <PopoverTrigger
+                              render={
+                                <button
+                                  type="button"
+                                  className="inline-flex items-center gap-1.5 text-[11px] rounded-md px-1.5 py-0.5 -ml-1 text-stone-600 hover:text-botanical-900 hover:bg-oatmeal-200/70 transition-colors cursor-pointer group text-left border border-transparent hover:border-stone-200/70"
+                                  title="Click to update follow-up date and time"
+                                >
+                                  <CalendarIcon className="h-3 w-3 text-stone-400 group-hover:text-botanical-700 shrink-0" />
+                                  {lead.followUpDate ? (
+                                    lead.followUpDate < Date.now() &&
+                                    ![
+                                      "converted",
+                                      "not_interested",
+                                      "invalid",
+                                    ].includes(lead.status || "") ? (
+                                      <span className="font-bold text-terracotta-700 bg-terracotta-100 px-1.5 py-0.2 rounded">
+                                        Overdue: {formatShortDateTime(lead.followUpDate)}
+                                      </span>
+                                    ) : (
+                                      <span className="font-medium text-stone-700 group-hover:text-botanical-900">
+                                        {formatShortDateTime(lead.followUpDate)}
+                                      </span>
+                                    )
+                                  ) : (
+                                    <span className="text-stone-400 italic group-hover:text-botanical-700">
+                                      + Set follow-up
+                                    </span>
+                                  )}
+                                </button>
+                              }
+                            />
+                            <PopoverContent
+                              align="start"
+                              sideOffset={4}
+                              className="p-3 w-auto bg-[#FCFBF8] border border-stone-200/90 rounded-2xl shadow-xl max-w-xs"
+                            >
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between border-b border-stone-100 pb-2 px-1">
+                                  <span className="text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
+                                    Set Follow-Up
+                                  </span>
+                                  {lead.followUpDate && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleQuickFollowUpChange(lead.leadId, null)
+                                      }
+                                      className="text-[11px] text-terracotta-700 hover:text-terracotta-900 hover:underline font-semibold cursor-pointer"
+                                    >
+                                      Clear Date
+                                    </button>
+                                  )}
+                                </div>
+
+                                {/* Quick Presets inside Popover */}
+                                <div className="flex items-center gap-1 px-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleQuickPresetDate(lead.leadId, 1)}
+                                    className="text-[10px] px-2 py-0.5 rounded-lg bg-oatmeal-100/90 hover:bg-oatmeal-200 text-stone-700 hover:text-botanical-900 font-semibold border border-stone-200/60 transition-colors cursor-pointer"
+                                  >
+                                    Tomorrow
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleQuickPresetDate(lead.leadId, 3)}
+                                    className="text-[10px] px-2 py-0.5 rounded-lg bg-oatmeal-100/90 hover:bg-oatmeal-200 text-stone-700 hover:text-botanical-900 font-semibold border border-stone-200/60 transition-colors cursor-pointer"
+                                  >
+                                    In 3 Days
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleQuickPresetDate(lead.leadId, 7)}
+                                    className="text-[10px] px-2 py-0.5 rounded-lg bg-oatmeal-100/90 hover:bg-oatmeal-200 text-stone-700 hover:text-botanical-900 font-semibold border border-stone-200/60 transition-colors cursor-pointer"
+                                  >
+                                    Next Week
+                                  </button>
+                                </div>
+
+                                <Calendar
+                                  mode="single"
+                                  selected={
+                                    lead.followUpDate
+                                      ? new Date(lead.followUpDate)
+                                      : undefined
+                                  }
+                                  onSelect={(date) => {
+                                    if (date) {
+                                      const [h, m] = activeFollowUpTime.split(":").map(Number);
+                                      const combined = new Date(date);
+                                      combined.setHours(isNaN(h) ? 10 : h, isNaN(m) ? 0 : m, 0, 0);
+                                      handleQuickFollowUpChange(lead.leadId, combined.getTime());
+                                    } else {
+                                      handleQuickFollowUpChange(lead.leadId, null);
+                                    }
+                                  }}
+                                  disabled={(date) => {
+                                    const today = new Date();
+                                    today.setHours(0, 0, 0, 0);
+                                    return date < today;
+                                  }}
+                                  autoFocus
+                                />
+
+                                {/* Time of Follow-Up in Table Popover */}
+                                <div className="pt-2.5 border-t border-stone-100 space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-1.5 text-xs text-stone-700 font-semibold">
+                                      <Clock className="h-3.5 w-3.5 text-botanical-700" />
+                                      <span>Call Time</span>
+                                    </div>
+                                    <input
+                                      type="time"
+                                      value={activeFollowUpTime}
+                                      onChange={(e) => {
+                                        const newTime = e.target.value;
+                                        setActiveFollowUpTime(newTime);
+                                        if (lead.followUpDate) {
+                                          const [h, m] = newTime.split(":").map(Number);
+                                          const updated = new Date(lead.followUpDate);
+                                          updated.setHours(isNaN(h) ? 10 : h, isNaN(m) ? 0 : m, 0, 0);
+                                          handleQuickFollowUpChange(lead.leadId, updated.getTime());
+                                        }
+                                      }}
+                                      className="h-8 px-2.5 rounded-lg border border-stone-300 bg-paper text-xs font-semibold text-stone-800 focus:outline-none focus:ring-1 focus:ring-botanical-500"
+                                    />
+                                  </div>
+
+                                  {/* Quick Time Slots */}
+                                  <div className="flex items-center justify-between gap-1 pt-0.5">
+                                    {["09:30", "11:00", "14:30", "16:00"].map((slot) => {
+                                      const [h, m] = slot.split(":").map(Number);
+                                      const label = `${h > 12 ? h - 12 : h}:${m === 0 ? "00" : m} ${h >= 12 ? "PM" : "AM"}`;
+                                      return (
+                                        <button
+                                          key={slot}
+                                          type="button"
+                                          onClick={() => {
+                                            setActiveFollowUpTime(slot);
+                                            if (lead.followUpDate) {
+                                              const updated = new Date(lead.followUpDate);
+                                              updated.setHours(h, m, 0, 0);
+                                              handleQuickFollowUpChange(lead.leadId, updated.getTime());
+                                            }
+                                          }}
+                                          className={cn(
+                                            "text-[10px] px-2 py-0.5 rounded-md border transition-colors cursor-pointer font-medium",
+                                            activeFollowUpTime === slot
+                                              ? "bg-botanical-800 text-white border-botanical-900 font-bold shadow-2xs"
+                                              : "bg-oatmeal-100 border-stone-200/80 text-stone-600 hover:bg-oatmeal-200"
+                                          )}
+                                        >
+                                          {label}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              </div>
+                            </PopoverContent>
+                          </Popover>
                         </div>
                       </TableCell>
 
@@ -1256,92 +1566,6 @@ export default function LeadsDashboard({
                         )}
                       </TableCell>
 
-                      {/* Source Badge */}
-                      <TableCell className="px-4 py-3.5">
-                        {getSourceBadge(lead.source)}
-                      </TableCell>
-
-                      {/* Social Links */}
-                      <TableCell className="px-4 py-3.5">
-                        <div
-                          className="flex items-center justify-center gap-1.5"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {/* WhatsApp */}
-                          {lead.whatsapp ? (
-                            <a
-                              href={`https://wa.me/${lead.whatsapp.replace(/[^0-9]/g, "")}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
-                              title="Chat on WhatsApp"
-                            >
-                              <WhatsAppIcon className="h-3.5 w-3.5" />
-                            </a>
-                          ) : (
-                            <span className="flex h-7 w-7 items-center justify-center rounded-lg text-stone-300">
-                              <WhatsAppIcon className="h-3.5 w-3.5 opacity-30" />
-                            </span>
-                          )}
-
-                          {/* Instagram */}
-                          {lead.instagram ? (
-                            <a
-                              href={lead.instagram}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="flex h-7 w-7 items-center justify-center rounded-lg bg-terracotta-50 text-terracotta-700 hover:bg-terracotta-100 transition-colors"
-                              title="Open Instagram"
-                            >
-                              <InstagramIcon className="h-3.5 w-3.5" />
-                            </a>
-                          ) : (
-                            <span className="flex h-7 w-7 items-center justify-center rounded-lg text-stone-300">
-                              <InstagramIcon className="h-3.5 w-3.5 opacity-30" />
-                            </span>
-                          )}
-
-                          {/* LinkedIn */}
-                          {lead.linkedin ? (
-                            <a
-                              href={lead.linkedin}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="flex h-7 w-7 items-center justify-center rounded-lg bg-botanical-50 text-botanical-800 hover:bg-botanical-100 transition-colors"
-                              title="Open LinkedIn"
-                            >
-                              <LinkedinIcon className="h-3.5 w-3.5" />
-                            </a>
-                          ) : (
-                            <span className="flex h-7 w-7 items-center justify-center rounded-lg text-stone-300">
-                              <LinkedinIcon className="h-3.5 w-3.5 opacity-30" />
-                            </span>
-                          )}
-
-                          {/* Facebook */}
-                          {lead.facebook ? (
-                            <a
-                              href={lead.facebook}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="flex h-7 w-7 items-center justify-center rounded-lg bg-stone-100 text-stone-700 hover:bg-stone-200 transition-colors"
-                              title="Open Facebook"
-                            >
-                              <FacebookIcon className="h-3.5 w-3.5" />
-                            </a>
-                          ) : (
-                            <span className="flex h-7 w-7 items-center justify-center rounded-lg text-stone-300">
-                              <FacebookIcon className="h-3.5 w-3.5 opacity-30" />
-                            </span>
-                          )}
-                        </div>
-                      </TableCell>
-
-                      {/* Date */}
-                      <TableCell className="px-4 py-3.5 text-right text-xs text-stone-400">
-                        {formatDate(lead.createdAt)}
-                      </TableCell>
-
                       {/* Actions Menu Column */}
                       <TableCell
                         className="px-3 py-3.5 text-center"
@@ -1381,6 +1605,17 @@ export default function LeadsDashboard({
                               <MessageSquare className="h-3.5 w-3.5 text-stone-600" />
                               <span>Activity & Notes ({lead.notes?.length || 0})</span>
                             </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setLeadToDelete(lead);
+                                setIsDeleteLeadModalOpen(true);
+                              }}
+                              className="gap-2 cursor-pointer text-rose-700 hover:text-rose-800 hover:bg-rose-50 font-medium"
+                            >
+                              <Trash2 className="h-3.5 w-3.5 text-rose-600" />
+                              <span>Delete Lead</span>
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -1416,6 +1651,11 @@ export default function LeadsDashboard({
         lead={selectedLeadForView}
         isOpen={isViewModalOpen}
         onClose={() => setIsViewModalOpen(false)}
+        onDeleteLead={(lead) => {
+          setIsViewModalOpen(false);
+          setLeadToDelete(lead);
+          setIsDeleteLeadModalOpen(true);
+        }}
       />
 
       {/* Lead Pipeline & Qualification Modal */}
@@ -1452,6 +1692,42 @@ export default function LeadsDashboard({
           setSyncFeedback("Lead successfully added to this group!");
           setTimeout(() => setSyncFeedback(null), 3000);
         }}
+      />
+
+      {/* Delete Lead Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={isDeleteLeadModalOpen}
+        onClose={() => {
+          if (!isDeletingLead) {
+            setIsDeleteLeadModalOpen(false);
+            setLeadToDelete(null);
+          }
+        }}
+        onConfirm={handleConfirmDeleteLead}
+        title="Delete Lead"
+        description="Are you sure you want to delete this lead? All associated contact information, pipeline status, and activity conversation notes will be permanently removed."
+        itemName={leadToDelete?.name}
+        isDeleting={isDeletingLead}
+      />
+
+      {/* Delete Search Group Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={isDeleteGroupModalOpen}
+        onClose={() => {
+          if (!isDeletingGroup) {
+            setIsDeleteGroupModalOpen(false);
+          }
+        }}
+        onConfirm={handleConfirmDeleteGroup}
+        title="Delete Search Group"
+        description="Are you sure you want to delete this entire search group? This will permanently delete the search group along with all leads collected within it."
+        itemName={groupQuery}
+        warningNote={
+          totalLeadsCount > 0
+            ? `All ${totalLeadsCount} leads in this search group will be permanently deleted.`
+            : undefined
+        }
+        isDeleting={isDeletingGroup}
       />
     </div>
   );
