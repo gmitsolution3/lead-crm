@@ -8,6 +8,8 @@ export const metadata: Metadata = {
 };
 
 export default async function ProfilePage() {
-  const session = await requireAuth();
+  const session = await requireAuth({
+    allowedRoles: ["admin", "moderator", "user"],
+  });
   return <ProfileDashboard user={session.user} />;
 }

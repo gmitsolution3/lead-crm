@@ -24,12 +24,13 @@ import {
   Clock,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import React, { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import React, { Suspense, useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session } = useSession();
 
   const [showPassword, setShowPassword] = useState(false);
@@ -52,9 +53,24 @@ export default function LoginPage() {
     },
   });
 
-  // Redirect if already authenticated as Admin
-  React.useEffect(() => {
-    if (session?.user && (session.user as any)?.role === "admin") {
+  // Handle URL errors (e.g. ?error=unauthorized)
+  useEffect(() => {
+    const errorParam = searchParams.get("error");
+    if (errorParam === "unauthorized") {
+      setAuthError("You are not authorized to access that resource. Please contact an administrator.");
+      setIsSubmitting(false);
+    } else if (errorParam === "banned") {
+      setAuthError("Your account has been suspended by an administrator.");
+      setIsSubmitting(false);
+    } else if (errorParam === "notfound") {
+      setAuthError("Account not found. Please register first.");
+      setIsSubmitting(false);
+    }
+  }, [searchParams]);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (session?.user) {
       router.push("/");
     }
   }, [session, router]);
@@ -73,17 +89,17 @@ export default function LoginPage() {
       if (res.error) {
         setAuthError(
           res.error.message ||
-            "Invalid credentials. Please verify your administrator email and password.",
+            "Invalid credentials. Please verify your email and password.",
         );
         setIsSubmitting(false);
         return;
       }
 
-      setAuthSuccess("Administrator verified. Entering dashboard...");
+      setAuthSuccess("Verified. Entering workspace...");
       setTimeout(() => {
         router.push("/");
         router.refresh();
-      }, 500);
+      }, 400);
     } catch (err: any) {
       setAuthError(
         err?.message || "Failed to sign in. Please try again.",
@@ -277,12 +293,13 @@ export default function LoginPage() {
             <div className="flex items-center gap-2 pt-1">
               <Checkbox
                 id="rememberMe"
+                className="shrink-0"
                 checked={!!watch("rememberMe")}
                 onCheckedChange={(val) => setValue("rememberMe", !!val)}
               />
-              <Label htmlFor="rememberMe" className="text-xs text-stone-600 cursor-pointer font-normal">
-                Keep admin session active
-              </Label>
+              <label htmlFor="rememberMe" className="text-xs text-stone-600 cursor-pointer font-normal select-none">
+                Keep session active
+              </label>
             </div>
 
             {/* Submit Button */}
@@ -298,7 +315,7 @@ export default function LoginPage() {
                 </>
               ) : (
                 <>
-                  <span>Sign In as Admin</span>
+                  <span>Sign In to Workspace</span>
                   <ArrowRight className="h-4 w-4 text-sage-300" />
                 </>
               )}
@@ -308,12 +325,12 @@ export default function LoginPage() {
           {/* Switch to Registration */}
           <div className="mt-7 pt-5 border-t border-stone-200/80 text-center">
             <p className="text-xs text-stone-500">
-              Need to create a new administrator profile?{" "}
+              Need to create a new workspace account?{" "}
               <Link
                 href="/register"
                 className="font-semibold text-botanical-800 hover:text-botanical-900 underline underline-offset-4 cursor-pointer"
               >
-                Register Admin
+                Register Account
               </Link>
             </p>
           </div>
@@ -338,5 +355,13 @@ export default function LoginPage() {
         &copy; 2026 GM Lead Generator &bull; Lead Extraction System
       </footer>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   );
 }

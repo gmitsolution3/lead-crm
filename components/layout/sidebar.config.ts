@@ -42,7 +42,7 @@ export const MASTER_NAVIGATION: NavSection[] = [
         title: "Lead Directory",
         href: "/leads",
         icon: Users,
-        roles: ["admin", "moderator", "user"],
+        roles: ["admin", "moderator"],
       },
     ],
   },

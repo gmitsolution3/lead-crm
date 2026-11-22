@@ -9,7 +9,10 @@ export default async function GroupLeadsPage({
 }: {
   params: Promise<{ groupId: string }>;
 }) {
-  const session = await requireAuth();
+  const session = await requireAuth({
+    allowedRoles: ["admin", "moderator"],
+    redirectTo: "/",
+  });
   const { groupId } = await params;
   return (
     <Suspense fallback={null}>

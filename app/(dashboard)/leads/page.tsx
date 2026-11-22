@@ -5,7 +5,10 @@ import LeadsGroupDashboard from "@/components/pages/LeadsGroupDashboard";
 export const instant = false;
 
 export default async function LeadsGroupPage() {
-  const session = await requireAuth();
+  const session = await requireAuth({
+    allowedRoles: ["admin", "moderator"],
+    redirectTo: "/",
+  });
   return (
     <Suspense fallback={null}>
       <LeadsGroupDashboard user={session.user} />

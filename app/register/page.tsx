@@ -413,17 +413,20 @@ export default function RegisterPage() {
                   <div className="flex items-start gap-2.5">
                     <Checkbox
                       id="terms"
-                      className="mt-0.5"
+                      className="mt-0.5 shrink-0"
                       checked={!!watch("terms")}
                       onCheckedChange={(val) => setValue("terms", !!val)}
                     />
-                    <Label htmlFor="terms" className="text-xs text-stone-600 cursor-pointer font-normal leading-relaxed">
+                    <label
+                      htmlFor="terms"
+                      className="text-xs text-stone-600 cursor-pointer font-normal leading-relaxed select-none"
+                    >
                       I agree to the{" "}
                       <span className="text-botanical-800 font-medium underline underline-offset-2">
                         Terms of Service
                       </span>{" "}
                       and acknowledge administrator approval flow.
-                    </Label>
+                    </label>
                   </div>
                   {errors.terms && (
                     <p className="text-[11px] text-terracotta-600 font-medium mt-1">

@@ -107,14 +107,6 @@ export const auth = betterAuth({
             });
           }
 
-          // Strict Gate: Only "admin" and "moderator" roles can ever acquire an active session
-          if (user.role !== "admin" && user.role !== "moderator") {
-            throw new APIError("FORBIDDEN", {
-              message:
-                "Account Pending Approval: Your account has been registered. An Administrator must promote you to Moderator before you can access the dashboard.",
-            });
-          }
-
           return { data: session };
         },
       },
