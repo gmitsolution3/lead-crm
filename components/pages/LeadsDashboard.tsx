@@ -2,6 +2,7 @@
 
 import { LeadDetailSheet } from "@/components/features/leads/LeadDetailSheet";
 import { LeadFormModal } from "@/components/features/leads/LeadFormModal";
+import { ExtensionSearchModal } from "@/components/features/leads/ExtensionSearchModal";
 import { LeadNotesModal } from "@/components/features/leads/LeadNotesModal";
 import { LeadPipelineModal } from "@/components/features/leads/LeadPipelineModal";
 import { LeadTableSkeletonRows } from "@/components/features/leads/LeadTableSkeleton";
@@ -72,6 +73,7 @@ import {
   Phone,
   PhoneCall,
   Plus,
+  Sparkles,
   RotateCcw,
   Search,
   Target,
@@ -581,6 +583,7 @@ export default function LeadsDashboard({
   // Delete group state & mutation
   const [isDeleteGroupModalOpen, setIsDeleteGroupModalOpen] =
     useState(false);
+  const [isExtractModalOpen, setIsExtractModalOpen] = useState(false);
   const {
     mutateAsync: deleteGroupMutation,
     isPending: isDeletingGroup,
@@ -804,7 +807,18 @@ export default function LeadsDashboard({
           </p>
         </div>
 
-        <div className="flex items-center gap-2 self-start sm:self-auto">
+        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsExtractModalOpen(true)}
+            className="text-xs h-9 text-botanical-800 border-stone-300 hover:border-botanical-600 gap-1.5 cursor-pointer rounded-xl bg-paper"
+            title="Launch search extraction for this query in Chrome extension"
+          >
+            <Sparkles className="h-3.5 w-3.5 text-terracotta-600" />
+            <span>Extract More Leads</span>
+          </Button>
+
           <Button
             variant="outline"
             size="sm"
@@ -2068,6 +2082,13 @@ export default function LeadsDashboard({
         requireConfirmationWord="CONFIRM"
         warningNote="Warning: All leads belonging to this search group will be permanently deleted."
         isDeleting={isDeletingGroup}
+      />
+
+      {/* Extension Search Automation Modal */}
+      <ExtensionSearchModal
+        isOpen={isExtractModalOpen}
+        onClose={() => setIsExtractModalOpen(false)}
+        initialQuery={groupQuery || ""}
       />
     </div>
   );

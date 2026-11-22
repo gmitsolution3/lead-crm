@@ -9,6 +9,7 @@ import {
   Plus,
   PanelLeftClose,
   PanelLeftOpen,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "./SidebarContext";
@@ -24,6 +25,7 @@ import { useSession, signOut } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { useFetch } from "@/hooks";
 import { LeadFormModal } from "@/components/features/leads/LeadFormModal";
+import { ExtensionSearchModal } from "@/components/features/leads/ExtensionSearchModal";
 import type { SearchGroup } from "@/types";
 
 interface HeaderProps {
@@ -46,6 +48,7 @@ export function Header({
   const canManageLeads = userRole === "admin" || userRole === "moderator";
 
   const [isAddLeadOpen, setIsAddLeadOpen] = useState(false);
+  const [isExtractModalOpen, setIsExtractModalOpen] = useState(false);
   const { data: searchGroupsResponse } = useFetch<any>("/search-groups");
   const searchGroups: SearchGroup[] = Array.isArray(searchGroupsResponse?.data)
     ? searchGroupsResponse.data
@@ -112,6 +115,18 @@ export function Header({
       <div className="flex items-center gap-2 sm:gap-3">
         {canManageLeads && (
           <>
+            {/* Extract Leads via Extension Button */}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setIsExtractModalOpen(true)}
+              className="inline-flex items-center gap-1.5 h-9 text-xs border-stone-200 text-stone-700 hover:text-botanical-900 hover:border-botanical-600 bg-paper cursor-pointer rounded-xl"
+              title="Launch search extraction in Chrome extension"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-terracotta-600" />
+              <span>Extract Leads</span>
+            </Button>
+
             {/* Add Lead Button */}
             <Button
               size="sm"
@@ -127,7 +142,7 @@ export function Header({
               variant="outline"
               size="sm"
               onClick={onRefreshData}
-              className="hidden sm:inline-flex items-center gap-1.5 h-9 text-xs border-stone-200 text-stone-700 hover:text-botanical-900 cursor-pointer"
+              className="hidden sm:inline-flex items-center gap-1.5 h-9 text-xs border-stone-200 text-stone-700 hover:text-botanical-900 cursor-pointer rounded-xl"
             >
               <RefreshCw className="h-3.5 w-3.5 text-sage-600" />
               <span>Sync Extension</span>
@@ -233,6 +248,12 @@ export function Header({
         isOpen={isAddLeadOpen}
         onClose={() => setIsAddLeadOpen(false)}
         searchGroups={searchGroups}
+      />
+
+      <ExtensionSearchModal
+        isOpen={isExtractModalOpen}
+        onClose={() => setIsExtractModalOpen(false)}
+        initialQuery={selectedGroupQuery || ""}
       />
     </header>
   );

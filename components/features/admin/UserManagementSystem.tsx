@@ -47,6 +47,8 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
+import { Skeleton } from "@/components/ui/skeleton";
+import { UserDetailSheet } from "./UserDetailSheet";
 
 export interface ManagedUser {
   id: string;
@@ -472,29 +474,37 @@ export function UserManagementSystem() {
       {/* User Directory Table Card */}
       <div className="rounded-3xl border border-stone-200/90 bg-[#FCFBF8] shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
         {/* Search & Filter Toolbar */}
-        <div className="p-4 sm:p-5 border-b border-stone-200/80 flex flex-col md:flex-row md:items-center md:justify-between gap-3 bg-oatmeal-100/30">
-          <div className="flex flex-1 flex-col sm:flex-row sm:items-center gap-3">
+        <div className="p-4 sm:p-5 border-b border-stone-200/80 flex flex-col md:flex-row md:items-end md:justify-between gap-3 bg-oatmeal-100/30">
+          <div className="flex flex-1 flex-col sm:flex-row sm:items-end gap-3 flex-wrap">
             {/* Search Input */}
-            <div className="relative w-full sm:w-80">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
-              <Input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search name, email, phone, or ID..."
-                className="h-9.5 pl-9 text-xs sm:text-sm bg-paper border-stone-200 focus:bg-paper"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 cursor-pointer"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
+            <div className="flex flex-col gap-1 w-full sm:w-80">
+              <label className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">
+                Search Users
+              </label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search name, email, phone, or ID..."
+                  className="h-9.5 pl-9 text-xs sm:text-sm bg-paper border-stone-200 focus:bg-paper rounded-xl"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 cursor-pointer"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Role Filter */}
-            <div className="w-full sm:w-44">
+            <div className="flex flex-col gap-1 w-full sm:w-48">
+              <label className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">
+                Role
+              </label>
               <Select
                 value={roleFilter}
                 onValueChange={(val: any) =>
@@ -503,12 +513,12 @@ export function UserManagementSystem() {
               >
                 <SelectTrigger
                   size="sm"
-                  className="h-9.5 text-xs bg-paper border-stone-200"
+                  className="h-9.5 text-xs bg-paper border-stone-200 rounded-xl"
                 >
-                  <SelectValue placeholder="All Roles" />
+                  <SelectValue placeholder="Role: All" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Roles</SelectItem>
+                  <SelectItem value="all">Role: All</SelectItem>
                   <SelectItem value="admin">
                     Administrator Only
                   </SelectItem>
@@ -523,7 +533,10 @@ export function UserManagementSystem() {
             </div>
 
             {/* Status Filter */}
-            <div className="w-full sm:w-44">
+            <div className="flex flex-col gap-1 w-full sm:w-48">
+              <label className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">
+                Account Status
+              </label>
               <Select
                 value={statusFilter}
                 onValueChange={(val: any) =>
@@ -532,12 +545,12 @@ export function UserManagementSystem() {
               >
                 <SelectTrigger
                   size="sm"
-                  className="h-9.5 text-xs bg-paper border-stone-200"
+                  className="h-9.5 text-xs bg-paper border-stone-200 rounded-xl"
                 >
-                  <SelectValue placeholder="All Statuses" />
+                  <SelectValue placeholder="Status: All" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="all">Status: All</SelectItem>
                   <SelectItem value="active">
                     Active (Admin &amp; Moderator)
                   </SelectItem>
@@ -548,9 +561,25 @@ export function UserManagementSystem() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Clear Filters Button if any filter active */}
+            {(searchQuery || roleFilter !== "all" || statusFilter !== "all") && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSearchQuery("");
+                  setRoleFilter("all");
+                  setStatusFilter("all");
+                }}
+                className="h-9.5 px-3 text-xs text-stone-500 hover:text-stone-800 rounded-xl self-end cursor-pointer"
+              >
+                Reset Filters
+              </Button>
+            )}
           </div>
 
-          <span className="text-xs text-stone-500 font-medium shrink-0">
+          <span className="text-xs text-stone-500 font-medium shrink-0 self-end pb-1">
             Showing{" "}
             <strong className="text-botanical-900">
               {filteredUsers.length}
@@ -586,16 +615,51 @@ export function UserManagementSystem() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="h-40 text-center">
-                    <div className="flex flex-col items-center justify-center gap-2 text-stone-400 text-xs">
-                      <Loader2 className="h-5 w-5 animate-spin text-botanical-700" />
-                      <span>
-                        Loading user directory from MongoDB...
-                      </span>
-                    </div>
-                  </TableCell>
-                </TableRow>
+                Array.from({ length: 5 }).map((_, idx) => (
+                  <TableRow
+                    key={idx}
+                    className="border-b border-stone-200/60"
+                  >
+                    {/* Identity Skeleton */}
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="h-9 w-9 rounded-xl shrink-0" />
+                        <div className="space-y-1.5 min-w-0">
+                          <Skeleton className="h-4 w-32 rounded" />
+                          <Skeleton className="h-3 w-44 rounded" />
+                        </div>
+                      </div>
+                    </TableCell>
+
+                    {/* Contact Skeleton */}
+                    <TableCell>
+                      <Skeleton className="h-4 w-28 rounded" />
+                    </TableCell>
+
+                    {/* Role Skeleton */}
+                    <TableCell>
+                      <Skeleton className="h-6 w-24 rounded-full" />
+                    </TableCell>
+
+                    {/* Status Skeleton */}
+                    <TableCell>
+                      <Skeleton className="h-6 w-20 rounded-full" />
+                    </TableCell>
+
+                    {/* Registered Date Skeleton */}
+                    <TableCell>
+                      <Skeleton className="h-4 w-20 rounded" />
+                    </TableCell>
+
+                    {/* Actions Skeleton */}
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Skeleton className="h-8 w-20 rounded-xl" />
+                        <Skeleton className="h-8 w-8 rounded-lg" />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
               ) : filteredUsers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="h-40 text-center">
@@ -624,17 +688,20 @@ export function UserManagementSystem() {
                       className="border-b border-stone-200/60 hover:bg-sage-50/20 transition-colors"
                     >
                       {/* Identity */}
-                      <TableCell>
+                      <TableCell
+                        onClick={() => setDetailModalUser(user)}
+                        className="cursor-pointer group"
+                      >
                         <div className="flex items-center gap-3">
                           {user.image ? (
                             <img
                               src={user.image}
                               alt={user.name}
-                              className="h-9 w-9 shrink-0 rounded-xl object-cover shadow-xs border border-stone-200"
+                              className="h-9 w-9 shrink-0 rounded-xl object-cover shadow-xs border border-stone-200 group-hover:border-botanical-600 transition-colors"
                             />
                           ) : (
                             <div
-                              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl font-bold text-xs shadow-xs ${
+                              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl font-bold text-xs shadow-xs group-hover:opacity-90 transition-opacity ${
                                 isBanned
                                   ? "bg-red-100 text-red-700 border border-red-200"
                                   : isAdmin
@@ -649,7 +716,7 @@ export function UserManagementSystem() {
                           )}
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5">
-                              <span className="text-xs font-semibold text-botanical-900 truncate">
+                              <span className="text-xs font-semibold text-botanical-900 group-hover:text-botanical-700 transition-colors truncate">
                                 {user.name}
                               </span>
                               {isCurrentUser && (
@@ -1143,125 +1210,36 @@ export function UserManagementSystem() {
         </div>
       )}
 
-      {/* MODAL 3: VIEW USER DETAIL MODAL */}
-      {detailModalUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
-          <div className="relative w-full max-w-lg rounded-3xl border border-stone-200 bg-[#FCFBF8] p-6 shadow-2xl space-y-5">
-            <button
-              onClick={() => setDetailModalUser(null)}
-              className="absolute top-4 right-4 text-stone-400 hover:text-stone-700 cursor-pointer"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-botanical-700 text-paper font-bold text-base">
-                {detailModalUser.name.charAt(0).toUpperCase()}
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-botanical-900">
-                  {detailModalUser.name}
-                </h3>
-                <p className="text-xs text-stone-500">
-                  {detailModalUser.email}
-                </p>
-              </div>
-            </div>
-
-            <div className="rounded-2xl bg-oatmeal-100/70 p-4 border border-stone-200/70 space-y-3 text-xs">
-              <div className="flex justify-between py-1 border-b border-stone-200/60">
-                <span className="text-stone-500">User ID:</span>
-                <span className="text-stone-800 font-medium">
-                  {detailModalUser.id}
-                </span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-stone-200/60">
-                <span className="text-stone-500">Phone:</span>
-                <span className="text-stone-800 font-medium">
-                  {detailModalUser.phone || "None registered"}
-                </span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-stone-200/60">
-                <span className="text-stone-500">System Role:</span>
-                <Badge
-                  variant={
-                    detailModalUser.role === "admin"
-                      ? "terracotta"
-                      : "sage"
-                  }
-                  className="text-[10px] uppercase"
-                >
-                  {detailModalUser.role}
-                </Badge>
-              </div>
-              <div className="flex justify-between py-1 border-b border-stone-200/60">
-                <span className="text-stone-500">
-                  Account Status:
-                </span>
-                <span
-                  className={`font-semibold ${detailModalUser.banned ? "text-red-600" : "text-emerald-700"}`}
-                >
-                  {detailModalUser.banned
-                    ? "Suspended (Banned)"
-                    : "Active"}
-                </span>
-              </div>
-              {detailModalUser.banned && (
-                <>
-                  <div className="flex justify-between py-1 border-b border-stone-200/60">
-                    <span className="text-stone-500">
-                      Ban Reason:
-                    </span>
-                    <span className="text-red-700 font-medium">
-                      {detailModalUser.banReason || "Not specified"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-stone-200/60">
-                    <span className="text-stone-500">
-                      Ban Expires:
-                    </span>
-                    <span className="text-stone-800">
-                      {detailModalUser.banExpires
-                        ? new Date(
-                            detailModalUser.banExpires,
-                          ).toLocaleString()
-                        : "Permanent"}
-                    </span>
-                  </div>
-                </>
-              )}
-              <div className="flex justify-between py-1 border-b border-stone-200/60">
-                <span className="text-stone-500">
-                  Registration Date:
-                </span>
-                <span className="text-stone-800">
-                  {new Date(
-                    detailModalUser.createdAt,
-                  ).toLocaleString()}
-                </span>
-              </div>
-              <div className="flex justify-between py-1">
-                <span className="text-stone-500">Last Modified:</span>
-                <span className="text-stone-800">
-                  {new Date(
-                    detailModalUser.updatedAt,
-                  ).toLocaleString()}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex justify-end pt-2">
-              <Button
-                variant="outline"
-                onClick={() => setDetailModalUser(null)}
-                className="h-9.5 px-5 rounded-xl border-stone-200 text-xs cursor-pointer"
-              >
-                Close Profile
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* SLIDE-OUT USER DETAIL SHEET (MODAL) */}
+      <UserDetailSheet
+        user={detailModalUser}
+        isOpen={!!detailModalUser}
+        onClose={() => setDetailModalUser(null)}
+        currentUserId={currentUserId}
+        onUpdateRole={async (userId, newRole) => {
+          await handleUpdateRole(userId, newRole);
+          setDetailModalUser((prev) =>
+            prev && prev.id === userId ? { ...prev, role: newRole } : prev
+          );
+        }}
+        onOpenBanModal={(user) => {
+          setDetailModalUser(null);
+          setBanModalUser(user);
+        }}
+        onUnbanUser={async (userId, userName) => {
+          await handleUnbanUser(userId, userName);
+          setDetailModalUser((prev) =>
+            prev && prev.id === userId
+              ? { ...prev, banned: false, banReason: null, banExpires: null }
+              : prev
+          );
+        }}
+        onOpenDeleteModal={(user) => {
+          setDetailModalUser(null);
+          setDeleteModalUser(user);
+        }}
+        isProcessing={isProcessing}
+      />
     </div>
   );
 }
