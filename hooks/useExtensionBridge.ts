@@ -2,12 +2,24 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 
+export interface ExtractionStatus {
+  isExtracting: boolean;
+  activeQuery: string;
+  activeTabId: number | null;
+  limit?: number;
+  collectedInSession?: number;
+  platform?: string;
+}
+
 export interface ExtensionBridgeStatus {
   isInstalled: boolean;
   version: string | null;
   isChecking: boolean;
   isTriggering: boolean;
+  isSyncing: boolean;
+  extractionStatus: ExtractionStatus | null;
   checkConnection: () => void;
+  syncExtension: () => Promise<void>;
   triggerSearch: (params: {
     query: string;
     platform?: "Google Maps" | "Facebook" | "LinkedIn" | "Instagram";
@@ -20,6 +32,8 @@ export function useExtensionBridge(): ExtensionBridgeStatus {
   const [version, setVersion] = useState<string | null>(null);
   const [isChecking, setIsChecking] = useState<boolean>(true);
   const [isTriggering, setIsTriggering] = useState<boolean>(false);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [extractionStatus, setExtractionStatus] = useState<ExtractionStatus | null>(null);
 
   const resolveTriggerRef = useRef<((val: { success: boolean; message?: string }) => void) | null>(null);
   const triggerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -42,6 +56,27 @@ export function useExtensionBridge(): ExtensionBridgeStatus {
     }, 1500);
   }, []);
 
+  const syncExtension = useCallback((): Promise<void> => {
+    return new Promise((resolve) => {
+      if (typeof window === "undefined") return resolve();
+      setIsSyncing(true);
+
+      window.postMessage(
+        {
+          source: "GM_DASHBOARD",
+          type: "SYNC",
+        },
+        "*"
+      );
+
+      // Brief animation time
+      setTimeout(() => {
+        setIsSyncing(false);
+        resolve();
+      }, 700);
+    });
+  }, []);
+
   // Message listener for Extension communication
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -52,13 +87,16 @@ export function useExtensionBridge(): ExtensionBridgeStatus {
         return;
       }
 
-      const { type, version: extVersion, success, error } = event.data;
+      const { type, version: extVersion, success, error, extractionStatus: extStatus } = event.data;
 
       // Pong response: extension is active
-      if (type === "PONG") {
+      if (type === "PONG" || type === "SYNC_DONE") {
         setIsInstalled(true);
         setVersion(extVersion || "1.0.0");
         setIsChecking(false);
+        if (extStatus) {
+          setExtractionStatus(extStatus);
+        }
       }
 
       // Search Trigger acknowledgement
@@ -86,7 +124,7 @@ export function useExtensionBridge(): ExtensionBridgeStatus {
     // Initial check
     checkConnection();
 
-    // Periodic gentle heartbeat every 6 seconds
+    // Periodic gentle heartbeat every 5 seconds to keep live extraction status refreshed
     const interval = setInterval(() => {
       window.postMessage(
         {
@@ -95,7 +133,7 @@ export function useExtensionBridge(): ExtensionBridgeStatus {
         },
         "*"
       );
-    }, 6000);
+    }, 5000);
 
     return () => {
       window.removeEventListener("message", handleMessage);
@@ -163,7 +201,10 @@ export function useExtensionBridge(): ExtensionBridgeStatus {
     version,
     isChecking,
     isTriggering,
+    isSyncing,
+    extractionStatus,
     checkConnection,
+    syncExtension,
     triggerSearch,
   };
 }
