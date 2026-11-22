@@ -71,7 +71,7 @@ const leadFormSchema = z.object({
   instagram: z.string().optional(),
   linkedin: z.string().optional(),
   facebook: z.string().optional(),
-  remark: z.string().optional(),
+  initialNote: z.string().optional(),
 });
 
 type LeadFormValues = z.infer<typeof leadFormSchema>;
@@ -130,7 +130,7 @@ export function LeadFormModal({
       instagram: "",
       linkedin: "",
       facebook: "",
-      remark: "",
+      initialNote: "",
     },
   });
 
@@ -159,7 +159,7 @@ export function LeadFormModal({
         instagram: "",
         linkedin: "",
         facebook: "",
-        remark: "",
+        initialNote: "",
       });
       setSubmitError(null);
     }
@@ -213,7 +213,7 @@ export function LeadFormModal({
         instagram: values.instagram?.trim() || undefined,
         linkedin: values.linkedin?.trim() || undefined,
         facebook: values.facebook?.trim() || undefined,
-        remark: values.remark?.trim() || undefined,
+        initialNote: values.initialNote?.trim() || undefined,
       };
 
       const response = await saveLeadMutation(payload);
@@ -554,16 +554,16 @@ export function LeadFormModal({
             </div>
           </div>
 
-          {/* SECTION 4: INTELLIGENCE REMARK */}
+          {/* SECTION 4: INITIAL ACTIVITY NOTE */}
           <div className="space-y-2 pt-3 border-t border-stone-200">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-botanical-800">
               <FileText className="h-3.5 w-3.5 text-botanical-600" />
-              <span>Notes & Outreach Remarks</span>
+              <span>Initial Activity & Outreach Note</span>
             </div>
             <Textarea
-              {...register("remark")}
+              {...register("initialNote")}
               rows={3}
-              placeholder="Add any outreach notes, conversation remarks, or client qualification details..."
+              placeholder="Add initial qualification notes, conversation summary, or client outreach details..."
               className="w-full bg-paper border-stone-300 text-xs"
             />
           </div>

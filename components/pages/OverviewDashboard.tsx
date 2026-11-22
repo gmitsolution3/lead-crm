@@ -43,28 +43,14 @@ export default function OverviewDashboard({ user }: OverviewDashboardProps) {
   // Colocated SWR fetch for search groups
   const { data: searchGroupsData } = useFetch<any>("/search-groups");
 
-  // Reusable SWR mutation for remark saving with automatic cache invalidation
-  const { mutateAsync: patchLeadRemark } = usePatch("/leads", {
-    invalidateQueries: [["/search-groups"], ["/leads"]],
-  });
-
   const groups: SearchGroup[] = useMemo(() => {
     const raw = searchGroupsData?.data || searchGroupsData;
     return Array.isArray(raw) ? raw : [];
   }, [searchGroupsData]);
 
-  const [remarkOverrides, setRemarkOverrides] = useState<Record<string, string>>({});
-
   const leads: Lead[] = useMemo(() => {
-    const extracted = groups.flatMap((g) => g.leads || []);
-    const baseList = extracted;
-    if (Object.keys(remarkOverrides).length === 0) return baseList;
-    return baseList.map((l) =>
-      remarkOverrides[l.leadId] !== undefined
-        ? { ...l, remark: remarkOverrides[l.leadId], updatedAt: new Date().toISOString() }
-        : l
-    );
-  }, [groups, remarkOverrides]);
+    return groups.flatMap((g) => g.leads || []);
+  }, [groups]);
 
   const activities: ActivityEvent[] = useMemo(() => {
     if (leads.length > 0) {
@@ -97,28 +83,6 @@ export default function OverviewDashboard({ user }: OverviewDashboardProps) {
     if (found) {
       handleSelectLead(found);
     }
-  };
-
-  const handleSaveRemark = async (leadId: string, newRemark: string) => {
-    setRemarkOverrides((prev) => ({ ...prev, [leadId]: newRemark }));
-    if (selectedLead && selectedLead.leadId === leadId) {
-      setSelectedLead((prev) =>
-        prev
-          ? { ...prev, remark: newRemark, updatedAt: new Date().toISOString() }
-          : null
-      );
-    }
-
-    try {
-      await patchLeadRemark({
-        id: `${encodeURIComponent(leadId)}/remark`,
-        data: { remark: newRemark },
-      });
-      setSyncFeedback("Remark saved successfully!");
-    } catch {
-      setSyncFeedback("Local remark updated (Offline mode)");
-    }
-    setTimeout(() => setSyncFeedback(null), 3000);
   };
 
   // Metrics Calculations
@@ -489,7 +453,6 @@ export default function OverviewDashboard({ user }: OverviewDashboardProps) {
         lead={selectedLead}
         isOpen={isSheetOpen}
         onClose={() => setIsSheetOpen(false)}
-        onSaveRemark={handleSaveRemark}
       />
     </div>
   );

@@ -1,6 +1,8 @@
 "use client";
 
 import { LeadDetailSheet } from "@/components/features/leads/LeadDetailSheet";
+import { LeadPipelineModal } from "@/components/features/leads/LeadPipelineModal";
+import { LeadNotesModal } from "@/components/features/leads/LeadNotesModal";
 import { LeadTableSkeletonRows } from "@/components/features/leads/LeadTableSkeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,6 +10,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -37,7 +40,6 @@ import {
 import { useFetch, usePatch } from "@/hooks";
 import { formatDate } from "@/lib/utils";
 import { useSession } from "@/lib/auth-client";
-import { apiClient } from "@/lib/axios";
 import type { User, LeadStatus, LeadPriority } from "@/types";
 import { Lead, SearchGroup } from "@/types";
 import { LeadFormModal } from "@/components/features/leads/LeadFormModal";
@@ -50,13 +52,17 @@ import {
   Clock,
   Download,
   ExternalLink,
+  Eye,
   Filter,
   FilterX,
   Flame,
   Globe,
   Loader2,
   Mail,
+  MessageSquare,
+  MoreHorizontal,
   Phone,
+  PhoneCall,
   Plus,
   RotateCcw,
   Search,
@@ -259,22 +265,30 @@ export default function LeadsDashboard({
     setPage(1);
   }, []);
 
+  // Mutation hook for lead updates with automatic cache invalidation
+  const { mutateAsync: updateLeadMutation } = usePatch("/leads", {
+    invalidateQueries: [["/search-groups"], ["/leads"]],
+  });
+
   // Quick 1-click status change from table row
   const handleQuickStatusChange = async (
     leadId: string,
     newStatus: LeadStatus,
   ) => {
     try {
-      await apiClient.patch(`/leads/${leadId}`, {
-        status: newStatus,
-        groupId: targetGroupId,
-        lastContactedBy: session?.user
-          ? {
-              userId: session.user.id,
-              name: session.user.name,
-              email: session.user.email,
-            }
-          : undefined,
+      await updateLeadMutation({
+        id: leadId,
+        data: {
+          status: newStatus,
+          groupId: targetGroupId,
+          updatedBy: session?.user
+            ? {
+                userId: session.user.id,
+                name: session.user.name,
+                email: session.user.email,
+              }
+            : undefined,
+        },
       });
       refetchLeads();
       setSyncFeedback(`Status updated to "${newStatus.replace("_", " ")}"`);
@@ -361,49 +375,31 @@ export default function LeadsDashboard({
     }
   };
 
-  // Reusable SWR mutation for remark saving with automatic cache invalidation
-  const { mutateAsync: patchLeadRemark } = usePatch("/leads", {
-    invalidateQueries: [["/search-groups"], ["/leads"]],
-  });
+  // Separate Modal states: View Details, Pipeline & Status, Activity & Notes
+  const [selectedLeadForView, setSelectedLeadForView] = useState<Lead | null>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
-  // Lead detail sheet state
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [syncFeedback, setSyncFeedback] = useState<string | null>(
-    null,
-  );
+  const [selectedLeadForPipeline, setSelectedLeadForPipeline] = useState<Lead | null>(null);
+  const [isPipelineModalOpen, setIsPipelineModalOpen] = useState(false);
 
-  const handleSelectLead = (lead: Lead) => {
-    setSelectedLead(lead);
-    setIsSheetOpen(true);
+  const [selectedLeadForNotes, setSelectedLeadForNotes] = useState<Lead | null>(null);
+  const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
+
+  const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
+
+  const handleOpenViewDetails = (lead: Lead) => {
+    setSelectedLeadForView(lead);
+    setIsViewModalOpen(true);
   };
 
-  const handleSaveRemark = async (
-    leadId: string,
-    newRemark: string,
-  ) => {
-    if (selectedLead && selectedLead.leadId === leadId) {
-      setSelectedLead((prev) =>
-        prev
-          ? {
-              ...prev,
-              remark: newRemark,
-              updatedAt: new Date().toISOString(),
-            }
-          : null,
-      );
-    }
+  const handleOpenPipeline = (lead: Lead) => {
+    setSelectedLeadForPipeline(lead);
+    setIsPipelineModalOpen(true);
+  };
 
-    try {
-      await patchLeadRemark({
-        id: `${encodeURIComponent(leadId)}/remark`,
-        data: { remark: newRemark, groupId: targetGroupId },
-      });
-      setSyncFeedback("Remark saved successfully!");
-    } catch {
-      setSyncFeedback("Local remark updated (Offline mode)");
-    }
-    setTimeout(() => setSyncFeedback(null), 3000);
+  const handleOpenNotes = (lead: Lead) => {
+    setSelectedLeadForNotes(lead);
+    setIsNotesModalOpen(true);
   };
 
   // Unique sources for filter dropdown
@@ -482,7 +478,7 @@ export default function LeadsDashboard({
       "WhatsApp",
       "Instagram",
       "LinkedIn",
-      "Remark",
+      "Latest Activity Note",
       "Created At",
     ];
 
@@ -505,7 +501,7 @@ export default function LeadsDashboard({
       `"${l.whatsapp || ""}"`,
       `"${l.instagram || ""}"`,
       `"${l.linkedin || ""}"`,
-      `"${(l.remark || "").replace(/"/g, '""')}"`,
+      `"${((l.notes && l.notes.length > 0 ? l.notes[l.notes.length - 1].content : "") || "").replace(/"/g, '""')}"`,
       `"${l.createdAt}"`,
     ]);
 
@@ -944,32 +940,35 @@ export default function LeadsDashboard({
           <Table>
             <TableHeader>
               <TableRow className="border-b border-stone-200 bg-oatmeal-200/60 hover:bg-oatmeal-200/60">
-                <TableHead className="w-[220px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
+                <TableHead className="w-[210px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
                   Lead / Business
                 </TableHead>
-                <TableHead className="w-[130px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
+                <TableHead className="w-[125px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
                   Status
                 </TableHead>
-                <TableHead className="w-[180px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
+                <TableHead className="w-[170px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
                   Contact Coordinates
                 </TableHead>
-                <TableHead className="w-[160px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
+                <TableHead className="w-[155px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
                   Priority & Follow-Up
                 </TableHead>
-                <TableHead className="w-[130px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
+                <TableHead className="w-[125px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
                   Dealt By
                 </TableHead>
-                <TableHead className="w-[140px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
+                <TableHead className="w-[135px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
                   Website / Opportunity
                 </TableHead>
-                <TableHead className="w-[100px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
+                <TableHead className="w-[95px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
                   Source
                 </TableHead>
-                <TableHead className="w-[110px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600 text-center">
+                <TableHead className="w-[105px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600 text-center">
                   Social Links
                 </TableHead>
-                <TableHead className="w-[80px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600 text-right">
+                <TableHead className="w-[75px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600 text-right">
                   Added
+                </TableHead>
+                <TableHead className="w-[55px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600 text-center">
+                  Actions
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -978,7 +977,7 @@ export default function LeadsDashboard({
                 <LeadTableSkeletonRows rows={limit > 10 ? 10 : limit} />
               ) : leads.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="p-8 sm:p-12 text-center">
+                  <TableCell colSpan={10} className="p-8 sm:p-12 text-center">
                     <EmptyState
                       compact
                       icon={hasActiveFilters ? FilterX : Users}
@@ -1015,7 +1014,7 @@ export default function LeadsDashboard({
                   return (
                     <TableRow
                       key={lead.leadId}
-                      onClick={() => handleSelectLead(lead)}
+                      onClick={() => handleOpenViewDetails(lead)}
                       className={`cursor-pointer transition-colors border-b border-stone-200/60 ${
                         isEven ? "bg-oatmeal-100/40" : "bg-paper"
                       } hover:bg-sage-100/50`}
@@ -1342,6 +1341,49 @@ export default function LeadsDashboard({
                       <TableCell className="px-4 py-3.5 text-right text-xs text-stone-400">
                         {formatDate(lead.createdAt)}
                       </TableCell>
+
+                      {/* Actions Menu Column */}
+                      <TableCell
+                        className="px-3 py-3.5 text-center"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            render={
+                              <button
+                                type="button"
+                                className="flex h-8 w-8 items-center justify-center rounded-lg text-stone-500 hover:text-stone-900 hover:bg-stone-200/70 transition-colors cursor-pointer outline-none focus:ring-1 focus:ring-botanical-500 mx-auto"
+                                title="Lead options"
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </button>
+                            }
+                          />
+                          <DropdownMenuContent align="end" className="w-52 p-1 text-xs">
+                            <DropdownMenuItem
+                              onClick={() => handleOpenViewDetails(lead)}
+                              className="gap-2 cursor-pointer"
+                            >
+                              <Eye className="h-3.5 w-3.5 text-stone-500" />
+                              <span>View Details</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleOpenPipeline(lead)}
+                              className="gap-2 cursor-pointer font-semibold text-botanical-900"
+                            >
+                              <Target className="h-3.5 w-3.5 text-botanical-700" />
+                              <span>Update Pipeline & Status</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleOpenNotes(lead)}
+                              className="gap-2 cursor-pointer"
+                            >
+                              <MessageSquare className="h-3.5 w-3.5 text-stone-600" />
+                              <span>Activity & Notes ({lead.notes?.length || 0})</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
                     </TableRow>
                   );
                 })
@@ -1369,14 +1411,32 @@ export default function LeadsDashboard({
         />
       </div>
 
-      {/* Slide-out Physical Paper Lead Detail Sheet */}
+      {/* Pure Read-Only Lead Detail Sheet */}
       <LeadDetailSheet
-        lead={selectedLead}
-        isOpen={isSheetOpen}
-        onClose={() => setIsSheetOpen(false)}
-        onSaveRemark={handleSaveRemark}
+        lead={selectedLeadForView}
+        isOpen={isViewModalOpen}
+        onClose={() => setIsViewModalOpen(false)}
+      />
+
+      {/* Lead Pipeline & Qualification Modal */}
+      <LeadPipelineModal
+        lead={selectedLeadForPipeline}
+        isOpen={isPipelineModalOpen}
+        onClose={() => setIsPipelineModalOpen(false)}
         onLeadUpdated={(updated) => {
-          setSelectedLead(updated);
+          setSelectedLeadForPipeline(updated);
+          refetchLeads();
+          refetchGroup();
+        }}
+      />
+
+      {/* Lead Activity & Notes Modal */}
+      <LeadNotesModal
+        lead={selectedLeadForNotes}
+        isOpen={isNotesModalOpen}
+        onClose={() => setIsNotesModalOpen(false)}
+        onLeadUpdated={(updated) => {
+          setSelectedLeadForNotes(updated);
           refetchLeads();
         }}
       />

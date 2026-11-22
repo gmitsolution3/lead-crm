@@ -1,28 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Sheet,
   SheetContent,
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Lead, LeadStatus, LeadPriority } from "@/types";
+import { Lead } from "@/types";
 import { formatDate } from "@/lib/utils";
-import { useSession } from "@/lib/auth-client";
-import { apiClient } from "@/lib/axios";
-import { useQueryClient } from "@tanstack/react-query";
 import {
   Mail,
   Phone,
@@ -39,9 +25,7 @@ import {
   PhoneCall,
   UserCheck,
   Clock,
-  Flame,
-  CheckCircle2,
-  AlertCircle,
+  Sparkles,
 } from "lucide-react";
 import {
   FacebookIcon,
@@ -54,42 +38,15 @@ interface LeadDetailSheetProps {
   lead: Lead | null;
   isOpen: boolean;
   onClose: () => void;
-  onSaveRemark?: (leadId: string, newRemark: string) => void;
-  onLeadUpdated?: (updatedLead: Lead) => void;
+  onLeadUpdated?: (lead: Lead) => void;
 }
 
 export function LeadDetailSheet({
-  lead: initialLead,
+  lead,
   isOpen,
   onClose,
-  onSaveRemark,
-  onLeadUpdated,
 }: LeadDetailSheetProps) {
-  const { data: session } = useSession();
-  const queryClient = useQueryClient();
-
-  const [lead, setLead] = useState<Lead | null>(initialLead);
   const [copiedField, setCopiedField] = useState<string | null>(null);
-  const [remarkText, setRemarkText] = useState(initialLead?.remark || "");
-  const [isEditingRemark, setIsEditingRemark] = useState(false);
-  const [newNoteText, setNewNoteText] = useState("");
-  const [isSubmittingNote, setIsSubmittingNote] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [dealValueInput, setDealValueInput] = useState<string>(
-    initialLead?.dealValue ? String(initialLead.dealValue) : "",
-  );
-
-  // Sync state whenever initialLead changes
-  useEffect(() => {
-    if (initialLead) {
-      setLead(initialLead);
-      setRemarkText(initialLead.remark || "");
-      setIsEditingRemark(false);
-      setDealValueInput(
-        initialLead.dealValue ? String(initialLead.dealValue) : "",
-      );
-    }
-  }, [initialLead]);
 
   if (!lead) return null;
 
@@ -114,151 +71,47 @@ export function LeadDetailSheet({
     }
   };
 
-  // Partial update helper for pipeline management
-  const handleUpdate = async (patch: Partial<Lead>) => {
-    setIsUpdating(true);
-    const updated = { ...lead, ...patch, updatedAt: Date.now() };
-    setLead(updated);
-    onLeadUpdated?.(updated);
-
-    try {
-      await apiClient.patch(`/leads/${lead.leadId}`, {
-        ...patch,
-        groupId: lead.groupId,
-      });
-      queryClient.invalidateQueries({ queryKey: ["/leads"] });
-      queryClient.invalidateQueries({ queryKey: ["/search-groups"] });
-    } catch (err) {
-      console.error("Failed to update lead management properties:", err);
-    } finally {
-      setIsUpdating(false);
+  const getStatusLabel = (status?: string) => {
+    switch (status) {
+      case "called":
+        return { label: "Called (Attempted)", icon: "📞", color: "bg-amber-100 text-amber-800 border-amber-300" };
+      case "call_later":
+        return { label: "Call Later (Follow-Up)", icon: "⏰", color: "bg-blue-100 text-blue-800 border-blue-300" };
+      case "interested":
+        return { label: "Interested (Hot)", icon: "🔥", color: "bg-emerald-100 text-emerald-800 border-emerald-300" };
+      case "not_interested":
+        return { label: "Not Interested", icon: "🚫", color: "bg-stone-100 text-stone-700 border-stone-300" };
+      case "converted":
+        return { label: "Converted (Deal Won)", icon: "🎉", color: "bg-purple-100 text-purple-800 border-purple-300" };
+      case "invalid":
+        return { label: "Invalid / Dead", icon: "❌", color: "bg-rose-100 text-rose-800 border-rose-300" };
+      default:
+        return { label: "Uncontacted (New)", icon: "🔵", color: "bg-stone-100 text-stone-700 border-stone-300" };
     }
   };
 
-  // 1-Click Call Logging
-  const handleLogCall = async () => {
-    const nextCallCount = (lead.callCount || 0) + 1;
-    const patch: Partial<Lead> = {
-      callCount: nextCallCount,
-      lastContactedAt: Date.now(),
-      status: lead.status === "uncontacted" ? "called" : lead.status,
-      lastContactedBy: session?.user
-        ? {
-            userId: session.user.id,
-            name: session.user.name,
-            email: session.user.email,
-          }
-        : undefined,
-    };
-    await handleUpdate(patch);
-  };
-
-  // Assign to logged-in user
-  const handleAssignToMe = async () => {
-    if (!session?.user) return;
-    await handleUpdate({
-      assignedTo: {
-        userId: session.user.id,
-        name: session.user.name,
-        email: session.user.email,
-      },
-    });
-  };
-
-  // Follow-up Date input & presets
-  const handlePresetDate = async (daysFromNow: number) => {
-    const targetDate = new Date();
-    targetDate.setDate(targetDate.getDate() + daysFromNow);
-    targetDate.setHours(10, 0, 0, 0); // 10:00 AM preset
-    await handleUpdate({ followUpDate: targetDate.getTime() });
-  };
-
-  const handleDateInputChange = async (val: string) => {
-    if (!val) {
-      await handleUpdate({ followUpDate: null });
-    } else {
-      const parsed = new Date(val);
-      if (!isNaN(parsed.getTime())) {
-        await handleUpdate({ followUpDate: parsed.getTime() });
-      }
+  const getPriorityLabel = (priority?: string) => {
+    switch (priority) {
+      case "high":
+        return { label: "High Priority", icon: "🔥", color: "text-terracotta-700 bg-terracotta-50 border-terracotta-300" };
+      case "low":
+        return { label: "Low Priority", icon: "❄️", color: "text-stone-600 bg-stone-100 border-stone-300" };
+      default:
+        return { label: "Medium Priority", icon: "⚡", color: "text-amber-800 bg-amber-50 border-amber-300" };
     }
   };
-
-  const followUpDateString = lead.followUpDate
-    ? new Date(lead.followUpDate).toISOString().split("T")[0]
-    : "";
 
   const isOverdue = Boolean(
     lead.followUpDate &&
       lead.followUpDate < Date.now() &&
-      !["converted", "not_interested", "invalid"].includes(lead.status || ""),
+      !["converted", "not_interested", "invalid"].includes(lead.status || "")
   );
 
-  // Deal Value blur
-  const handleDealValueBlur = async () => {
-    const numeric = parseFloat(dealValueInput);
-    const finalVal = isNaN(numeric) ? 0 : numeric;
-    if (finalVal !== (lead.dealValue || 0)) {
-      await handleUpdate({ dealValue: finalVal });
-    }
-  };
-
-  // Add Conversation Note
-  const handleAddNote = async () => {
-    if (!newNoteText.trim()) return;
-    setIsSubmittingNote(true);
-
-    try {
-      const res = await apiClient.post(`/leads/${lead.leadId}/notes`, {
-        content: newNoteText.trim(),
-        createdBy: session?.user
-          ? {
-              userId: session.user.id,
-              name: session.user.name,
-              email: session.user.email,
-            }
-          : undefined,
-        groupId: lead.groupId,
-      });
-
-      const updatedLead = res.data?.data || res.data;
-      if (updatedLead?.notes) {
-        setLead(updatedLead);
-        onLeadUpdated?.(updatedLead);
-      }
-      setNewNoteText("");
-      queryClient.invalidateQueries({ queryKey: ["/leads"] });
-    } catch (err) {
-      console.error("Failed to add note:", err);
-    } finally {
-      setIsSubmittingNote(false);
-    }
-  };
-
-  // Delete Conversation Note
-  const handleDeleteNote = async (noteId: string) => {
-    try {
-      const res = await apiClient.delete(
-        `/leads/${lead.leadId}/notes/${noteId}?groupId=${lead.groupId}`,
-      );
-      const updatedLead = res.data?.data || res.data;
-      if (updatedLead?.notes) {
-        setLead(updatedLead);
-        onLeadUpdated?.(updatedLead);
-      } else {
-        const filteredNotes = (lead.notes || []).filter(
-          (n) => n.noteId !== noteId,
-        );
-        setLead({ ...lead, notes: filteredNotes });
-      }
-      queryClient.invalidateQueries({ queryKey: ["/leads"] });
-    } catch (err) {
-      console.error("Failed to delete note:", err);
-    }
-  };
+  const statusInfo = getStatusLabel(lead.status);
+  const priorityInfo = getPriorityLabel(lead.priority);
 
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-    lead.address || lead.name,
+    lead.address || lead.name
   )}`;
 
   return (
@@ -309,213 +162,129 @@ export function LeadDetailSheet({
 
         {/* Paper Body Content */}
         <div className="mt-8 space-y-8">
-          {/* SECTION: PIPELINE, OUTREACH & MANAGEMENT */}
-          <div className="rounded-2xl border border-stone-200 bg-paper p-5 shadow-sm space-y-5">
-            <div className="flex items-center justify-between border-b border-stone-100 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-botanical-100 text-botanical-800">
-                  <Target className="h-4 w-4 text-botanical-700" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-botanical-900">
-                    Pipeline & Outreach Status
-                  </h4>
-                  <p className="text-[11px] text-stone-400">
-                    Manage stage, follow-ups, and lead ownership
-                  </p>
-                </div>
+          {/* SECTION: PIPELINE STATUS OVERVIEW (READ-ONLY) */}
+          <div className="rounded-2xl border border-stone-200 bg-paper p-5 shadow-sm space-y-4">
+            <div className="flex items-center gap-2 border-b border-stone-100 pb-3">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-botanical-100 text-botanical-800">
+                <Target className="h-4 w-4 text-botanical-700" />
               </div>
-
-              {/* Log Call Action */}
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleLogCall}
-                disabled={isUpdating}
-                className="text-xs h-8 border-stone-300 text-stone-700 hover:text-botanical-900 hover:bg-sage-50 gap-1.5 rounded-xl cursor-pointer"
-                title="Record that a call was placed right now"
-              >
-                <PhoneCall className="h-3.5 w-3.5 text-botanical-600" />
-                <span>Log Call ({lead.callCount || 0})</span>
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Outreach Status Selector */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-stone-700">
-                  Outreach Status
-                </Label>
-                <Select
-                  value={lead.status || "uncontacted"}
-                  onValueChange={(val) => {
-                    if (val) handleUpdate({ status: val as LeadStatus });
-                  }}
-                >
-                  <SelectTrigger className="w-full h-9.5 text-xs bg-paper border-stone-300">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="uncontacted">
-                      🔵 Uncontacted (New)
-                    </SelectItem>
-                    <SelectItem value="called">
-                      📞 Called (Attempted)
-                    </SelectItem>
-                    <SelectItem value="call_later">
-                      ⏰ Call Later (Follow Up)
-                    </SelectItem>
-                    <SelectItem value="interested">
-                      🔥 Interested (Hot)
-                    </SelectItem>
-                    <SelectItem value="not_interested">
-                      🚫 Not Interested
-                    </SelectItem>
-                    <SelectItem value="converted">
-                      🎉 Converted (Deal Won)
-                    </SelectItem>
-                    <SelectItem value="invalid">
-                      ❌ Invalid / Dead
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Priority Selector */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-stone-700">
-                  Priority Urgency
-                </Label>
-                <Select
-                  value={lead.priority || "medium"}
-                  onValueChange={(val) => {
-                    if (val) handleUpdate({ priority: val as LeadPriority });
-                  }}
-                >
-                  <SelectTrigger className="w-full h-9.5 text-xs bg-paper border-stone-300">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="high">
-                      🔥 High Priority (Urgent)
-                    </SelectItem>
-                    <SelectItem value="medium">
-                      ⚡ Medium Priority
-                    </SelectItem>
-                    <SelectItem value="low">
-                      ❄️ Low Priority
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Follow-up Date */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs font-semibold text-stone-700 flex items-center gap-1.5">
-                    <Calendar className="h-3 w-3 text-stone-400" /> Follow-Up Date
-                  </Label>
-                  {isOverdue && (
-                    <span className="text-[10px] font-bold text-terracotta-700 bg-terracotta-100 px-1.5 py-0.5 rounded">
-                      Overdue
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <input
-                    type="date"
-                    value={followUpDateString}
-                    onChange={(e) => handleDateInputChange(e.target.value)}
-                    className="w-full h-9 px-3 rounded-xl border border-stone-300 bg-paper text-xs text-stone-800"
-                  />
-                  {lead.followUpDate && (
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => handleUpdate({ followUpDate: null })}
-                      className="h-8 w-8 text-stone-400 hover:text-stone-700 rounded-xl cursor-pointer"
-                      title="Clear date"
-                    >
-                      ×
-                    </Button>
-                  )}
-                </div>
-                <div className="flex items-center gap-1 pt-0.5">
-                  <button
-                    onClick={() => handlePresetDate(1)}
-                    className="text-[10px] px-2 py-0.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-600 font-medium cursor-pointer"
-                  >
-                    Tomorrow
-                  </button>
-                  <button
-                    onClick={() => handlePresetDate(3)}
-                    className="text-[10px] px-2 py-0.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-600 font-medium cursor-pointer"
-                  >
-                    In 3 Days
-                  </button>
-                  <button
-                    onClick={() => handlePresetDate(7)}
-                    className="text-[10px] px-2 py-0.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-600 font-medium cursor-pointer"
-                  >
-                    Next Week
-                  </button>
-                </div>
-              </div>
-
-              {/* Deal Value */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-stone-700">
-                  Estimated Deal / Quote ($)
-                </Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-xs text-stone-400 font-bold">
-                    $
-                  </span>
-                  <Input
-                    type="number"
-                    value={dealValueInput}
-                    onChange={(e) => setDealValueInput(e.target.value)}
-                    onBlur={handleDealValueBlur}
-                    placeholder="0.00"
-                    className="pl-7 h-9 text-xs bg-paper border-stone-300"
-                  />
-                </div>
-                <p className="text-[10px] text-stone-400">
-                  Quoted deal value or expected contract amount
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-botanical-900">
+                  Pipeline & Qualification Status
+                </h4>
+                <p className="text-[11px] text-stone-400">
+                  Current sales stage and outreach parameters
                 </p>
               </div>
             </div>
 
-            {/* Ownership & Last Touchpoint */}
-            <div className="pt-3 border-t border-stone-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs">
-              <div className="flex items-center gap-2">
-                <UserCheck className="h-4 w-4 text-botanical-700 shrink-0" />
-                <span className="text-stone-500">Dealt By:</span>
-                <span className="font-semibold text-botanical-900">
-                  {lead.assignedTo?.name || "Unassigned"}
+            {/* 2x2 Grid for Stage, Priority, Deal Value & Calls Placed */}
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              {/* Outreach Stage */}
+              <div className="p-3 rounded-xl bg-oatmeal-100/50 border border-stone-200/70 space-y-1.5">
+                <span className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider block">
+                  Stage
                 </span>
-                {session?.user &&
-                  lead.assignedTo?.userId !== session.user.id && (
-                    <button
-                      onClick={handleAssignToMe}
-                      className="text-[11px] font-semibold text-botanical-700 hover:underline ml-1 cursor-pointer"
-                    >
-                      (Assign to me)
-                    </button>
-                  )}
+                <div>
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border whitespace-nowrap shadow-2xs ${statusInfo.color}`}
+                  >
+                    <span>{statusInfo.icon}</span>
+                    <span>{statusInfo.label}</span>
+                  </span>
+                </div>
               </div>
 
-              {lead.lastContactedAt && (
-                <div className="text-[11px] text-stone-400">
-                  Last touchpoint: {formatDate(lead.lastContactedAt)}
-                  {lead.lastContactedBy?.name
-                    ? ` by ${lead.lastContactedBy.name}`
-                    : ""}
+              {/* Priority */}
+              <div className="p-3 rounded-xl bg-oatmeal-100/50 border border-stone-200/70 space-y-1.5">
+                <span className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider block">
+                  Priority
+                </span>
+                <div>
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border whitespace-nowrap shadow-2xs ${priorityInfo.color}`}
+                  >
+                    <span>{priorityInfo.icon}</span>
+                    <span>{priorityInfo.label}</span>
+                  </span>
                 </div>
-              )}
+              </div>
+
+              {/* Deal Value */}
+              <div className="p-3 rounded-xl bg-oatmeal-100/50 border border-stone-200/70 space-y-1">
+                <span className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider block">
+                  Deal Value
+                </span>
+                <p className="text-base font-bold text-botanical-900 tracking-tight">
+                  {lead.dealValue ? `$${Number(lead.dealValue).toLocaleString()}` : "$0.00"}
+                </p>
+              </div>
+
+              {/* Calls Attempted */}
+              <div className="p-3 rounded-xl bg-oatmeal-100/50 border border-stone-200/70 space-y-1">
+                <span className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider block">
+                  Calls Placed
+                </span>
+                <p className="text-base font-bold text-stone-800 flex items-center gap-1.5 tracking-tight">
+                  <PhoneCall className="h-3.5 w-3.5 text-botanical-600" />
+                  <span>{lead.callCount || 0}</span>
+                </p>
+              </div>
             </div>
+
+            {/* Follow-up & Ownership Row */}
+            <div className="pt-3 border-t border-stone-100 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              {/* Follow-up */}
+              <div className="p-2.5 rounded-xl bg-oatmeal-100/30 border border-stone-200/60 space-y-1">
+                <span className="text-[11px] font-semibold text-stone-400 flex items-center gap-1 uppercase tracking-wider">
+                  <Calendar className="h-3 w-3" /> Scheduled Follow-Up
+                </span>
+                <div className="flex items-center gap-2">
+                  {lead.followUpDate ? (
+                    <>
+                      <span className="font-semibold text-stone-800">
+                        {formatDate(lead.followUpDate)}
+                      </span>
+                      {isOverdue && (
+                        <span className="text-[10px] font-bold text-terracotta-700 bg-terracotta-100 px-1.5 py-0.5 rounded border border-terracotta-200">
+                          Overdue
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <span className="text-stone-400 italic">No follow-up scheduled</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Dealt By */}
+              <div className="p-2.5 rounded-xl bg-oatmeal-100/30 border border-stone-200/60 space-y-1">
+                <span className="text-[11px] font-semibold text-stone-400 flex items-center gap-1 uppercase tracking-wider">
+                  <UserCheck className="h-3 w-3" /> Assigned Team Member
+                </span>
+                <p className="font-semibold text-botanical-900 truncate">
+                  {lead.assignedTo?.name || "Unassigned"}
+                  {lead.assignedTo?.email && (
+                    <span className="font-normal text-stone-500 text-[11px] ml-1">
+                      ({lead.assignedTo.email})
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            {lead.lastContactedAt && (
+              <div className="pt-2 border-t border-stone-100 text-[11px] text-stone-500 flex items-center gap-1.5">
+                <Clock className="h-3 w-3 text-stone-400" />
+                <span>Last touchpoint recorded:</span>
+                <span className="font-medium text-stone-700">
+                  {formatDate(lead.lastContactedAt)}
+                </span>
+                {lead.lastContactedBy?.name && (
+                  <span className="italic">by {lead.lastContactedBy.name}</span>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Potential Client Opportunity Callout (when no website) */}
@@ -544,70 +313,6 @@ export function LeadDetailSheet({
             </div>
           )}
 
-          {/* SECTION: CONVERSATION HISTORY & TIMELINE NOTES */}
-          <div className="space-y-3">
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-botanical-800 flex items-center gap-2">
-              <Clock className="h-3.5 w-3.5 text-botanical-600" />
-              Conversation History & Activity ({lead.notes?.length || 0})
-            </h4>
-
-            {/* Note Input */}
-            <div className="rounded-xl border border-stone-200 bg-paper p-3 shadow-2xs space-y-2">
-              <Textarea
-                value={newNoteText}
-                onChange={(e) => setNewNoteText(e.target.value)}
-                placeholder="Log a call summary, client feedback, or agreement notes..."
-                rows={2}
-                className="w-full text-xs bg-transparent border-stone-200 focus-visible:ring-1"
-              />
-              <div className="flex justify-end">
-                <Button
-                  size="sm"
-                  disabled={!newNoteText.trim() || isSubmittingNote}
-                  onClick={handleAddNote}
-                  className="text-xs h-7.5 bg-botanical-800 hover:bg-botanical-900 text-white rounded-lg px-3 cursor-pointer"
-                >
-                  {isSubmittingNote ? "Posting..." : "Post Note"}
-                </Button>
-              </div>
-            </div>
-
-            {/* Notes List */}
-            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-              {lead.notes && lead.notes.length > 0 ? (
-                [...lead.notes].reverse().map((note) => (
-                  <div
-                    key={note.noteId}
-                    className="rounded-xl border border-stone-200/80 bg-oatmeal-100/60 p-3 text-xs space-y-1 relative group"
-                  >
-                    <div className="flex items-center justify-between text-[11px] text-stone-400">
-                      <span className="font-semibold text-botanical-800">
-                        {note.createdBy?.name || "Team Member"}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <span>{formatDate(note.createdAt)}</span>
-                        <button
-                          onClick={() => handleDeleteNote(note.noteId)}
-                          className="opacity-0 group-hover:opacity-100 text-stone-400 hover:text-terracotta-700 transition-opacity cursor-pointer font-bold"
-                          title="Delete note"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    </div>
-                    <p className="text-stone-700 whitespace-pre-wrap leading-relaxed">
-                      {note.content}
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <p className="text-xs text-stone-400 italic py-1">
-                  No conversation logs yet. Post the first update above!
-                </p>
-              )}
-            </div>
-          </div>
-
           {/* Section: Direct Contact Essentials */}
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-wider text-botanical-800 mb-3 flex items-center gap-2">
@@ -634,7 +339,7 @@ export function LeadDetailSheet({
                 {lead.phone && (
                   <button
                     onClick={() => copyToClipboard(lead.phone, "phone")}
-                    className="text-stone-400 hover:text-botanical-700 cursor-pointer"
+                    className="text-stone-400 hover:text-botanical-700 cursor-pointer p-1"
                     title="Copy phone"
                   >
                     {copiedField === "phone" ? (
@@ -664,7 +369,7 @@ export function LeadDetailSheet({
                 {lead.email && (
                   <button
                     onClick={() => copyToClipboard(lead.email, "email")}
-                    className="text-stone-400 hover:text-botanical-700 cursor-pointer"
+                    className="text-stone-400 hover:text-botanical-700 cursor-pointer p-1"
                     title="Copy email"
                   >
                     {copiedField === "email" ? (
@@ -705,7 +410,7 @@ export function LeadDetailSheet({
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => copyToClipboard(lead.website, "website")}
-                      className="text-stone-400 hover:text-botanical-700 cursor-pointer"
+                      className="text-stone-400 hover:text-botanical-700 cursor-pointer p-1"
                       title="Copy URL"
                     >
                       {copiedField === "website" ? (
@@ -722,7 +427,7 @@ export function LeadDetailSheet({
                       }
                       target="_blank"
                       rel="noreferrer"
-                      className="text-stone-400 hover:text-botanical-700 cursor-pointer"
+                      className="text-stone-400 hover:text-botanical-700 cursor-pointer p-1"
                       title="Open website"
                     >
                       <ExternalLink className="h-3.5 w-3.5" />
@@ -787,7 +492,7 @@ export function LeadDetailSheet({
                     href={`https://wa.me/${lead.whatsapp.replace(/[^0-9]/g, "")}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-stone-400 hover:text-emerald-700 cursor-pointer"
+                    className="text-stone-400 hover:text-emerald-700 cursor-pointer p-1"
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
                   </a>
@@ -814,7 +519,7 @@ export function LeadDetailSheet({
                     href={lead.instagram}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-stone-400 hover:text-terracotta-700 cursor-pointer"
+                    className="text-stone-400 hover:text-terracotta-700 cursor-pointer p-1"
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
                   </a>
@@ -841,7 +546,7 @@ export function LeadDetailSheet({
                     href={lead.linkedin}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-stone-400 hover:text-botanical-700 cursor-pointer"
+                    className="text-stone-400 hover:text-botanical-700 cursor-pointer p-1"
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
                   </a>
@@ -868,7 +573,7 @@ export function LeadDetailSheet({
                     href={lead.facebook}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-stone-400 hover:text-stone-700 cursor-pointer"
+                    className="text-stone-400 hover:text-stone-700 cursor-pointer p-1"
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
                   </a>
@@ -877,43 +582,34 @@ export function LeadDetailSheet({
             </div>
           </div>
 
-          {/* Section: Premium Sticky Remark */}
+          {/* Section: Conversation History Timeline */}
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-botanical-800 flex items-center gap-2">
-                <Bookmark className="h-3.5 w-3.5 text-terracotta-500" />
-                Quick Remark
-              </h4>
-              <button
-                onClick={() => {
-                  if (isEditingRemark) {
-                    onSaveRemark?.(lead.leadId, remarkText);
-                    handleUpdate({ remark: remarkText });
-                    setIsEditingRemark(false);
-                  } else {
-                    setIsEditingRemark(true);
-                  }
-                }}
-                className="text-xs font-semibold text-botanical-700 hover:text-botanical-900 cursor-pointer"
-              >
-                {isEditingRemark ? "Save Remark" : "Edit"}
-              </button>
-            </div>
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-botanical-800 mb-3 flex items-center gap-2">
+              <Clock className="h-3.5 w-3.5 text-botanical-600" />
+              Activity & Conversation History ({lead.notes?.length || 0})
+            </h4>
 
-            <div className="rounded-2xl border border-terracotta-200/80 bg-oatmeal-100/70 p-4 shadow-sm relative">
-              <div className="absolute top-3 right-3 text-terracotta-400">
-                <FileText className="h-4 w-4 opacity-50" />
-              </div>
-              {isEditingRemark ? (
-                <Textarea
-                  value={remarkText}
-                  onChange={(e) => setRemarkText(e.target.value)}
-                  rows={3}
-                  className="w-full bg-paper border-stone-300 text-xs text-stone-800"
-                />
+            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+              {lead.notes && lead.notes.length > 0 ? (
+                [...lead.notes].reverse().map((note) => (
+                  <div
+                    key={note.noteId}
+                    className="rounded-xl border border-stone-200/80 bg-paper p-3 text-xs space-y-1 shadow-2xs"
+                  >
+                    <div className="flex items-center justify-between text-[11px] text-stone-400">
+                      <span className="font-semibold text-botanical-800">
+                        {note.createdBy?.name || "Team Member"}
+                      </span>
+                      <span>{formatDate(note.createdAt)}</span>
+                    </div>
+                    <p className="text-stone-700 whitespace-pre-wrap leading-relaxed">
+                      {note.content}
+                    </p>
+                  </div>
+                ))
               ) : (
-                <p className="text-xs leading-relaxed text-stone-700 italic">
-                  &ldquo;{remarkText || "No notes recorded yet for this prospect."}&rdquo;
+                <p className="text-xs text-stone-400 italic py-1">
+                  No conversation logs recorded yet.
                 </p>
               )}
             </div>

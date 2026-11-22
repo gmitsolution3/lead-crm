@@ -50,7 +50,6 @@ export interface Lead {
   instagram?: string;
   linkedin?: string;
   whatsapp?: string;
-  remark?: string;
   status?: LeadStatus;
   priority?: LeadPriority;
   followUpDate?: number | null;
