@@ -1,12 +1,16 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useSession } from "@/lib/auth-client";
+import { useFetch, usePatch, usePost, useDelete } from "@/hooks";
 import {
   User as UserIcon,
   Shield,
@@ -43,123 +47,162 @@ interface UserProfileData {
   updatedAt: string;
 }
 
+// Zod Schemas for Profile & Password Forms
+const profileSchema = z.object({
+  name: z.string().min(1, "Full name is required").max(100, "Name is too long"),
+  phone: z.string(),
+});
+
+const passwordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Current password is required"),
+    newPassword: z.string().min(6, "New password must be at least 6 characters long"),
+    confirmPassword: z.string().min(1, "Please confirm your new password"),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "New password and confirm password do not match",
+    path: ["confirmPassword"],
+  });
+
+type ProfileFormValues = z.infer<typeof profileSchema>;
+type PasswordFormValues = z.infer<typeof passwordSchema>;
+
 export default function ProfileDashboard({ user: initialUser }: ProfileDashboardProps) {
   const { data: session } = useSession();
 
-  // User Profile State
-  const [profile, setProfile] = useState<UserProfileData | null>(null);
-  const [profileLoading, setProfileLoading] = useState(true);
-
-  // Profile Edit Form State
-  const [editName, setEditName] = useState("");
-  const [editPhone, setEditPhone] = useState("");
-  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
-  const [profileFeedback, setProfileFeedback] = useState<{
-    type: "success" | "error";
-    message: string;
-  } | null>(null);
-
-  // Avatar Upload State
+  // Avatar upload/delete state
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-  const [isDeletingAvatar, setIsDeletingAvatar] = useState(false);
   const [avatarFeedback, setAvatarFeedback] = useState<{
     type: "success" | "error";
     message: string;
   } | null>(null);
 
-  // Password Change State
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  // Form feedback state
+  const [profileFeedback, setProfileFeedback] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+
   const [passwordFeedback, setPasswordFeedback] = useState<{
     type: "success" | "error";
     message: string;
   } | null>(null);
 
-  // Fetch live user profile
-  const fetchProfile = async () => {
-    try {
-      const res = await fetch("/api/user/profile");
-      if (res.ok) {
-        const data = await res.json();
-        if (data.user) {
-          setProfile(data.user);
-          setEditName(data.user.name || "");
-          setEditPhone(data.user.phone || "");
-        }
-      } else {
-        const fallback: UserProfileData = {
-          id: initialUser?.id || session?.user?.id || "",
-          name: initialUser?.name || session?.user?.name || "Workspace Member",
-          email: initialUser?.email || session?.user?.email || "user@example.com",
-          phone: initialUser?.phone || "",
-          role: initialUser?.role || (session?.user as any)?.role || "moderator",
-          image: initialUser?.image || session?.user?.image || null,
-          imagePublicId: initialUser?.imagePublicId || null,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-        setProfile(fallback);
-        setEditName(fallback.name);
-        setEditPhone(fallback.phone);
-      }
-    } catch {
-      // Ignore network errors
-    } finally {
-      setProfileLoading(false);
+  // Password visibility state
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // API Hooks
+  const {
+    data: profileData,
+    isLoading: profileLoading,
+    refetch: refetchProfile,
+  } = useFetch<any>("/api/user/profile");
+
+  const { mutateAsync: updateProfileMutation, isPending: isUpdatingProfile } =
+    usePatch("/api/user/profile");
+
+  const { mutateAsync: updatePasswordMutation, isPending: isChangingPassword } =
+    usePost("/api/user/password");
+
+  const { mutateAsync: uploadAvatarMutation, isPending: isUploadingAvatar } =
+    usePost("/api/user/avatar");
+
+  const { mutateAsync: deleteAvatarMutation, isPending: isDeletingAvatar } =
+    useDelete("/api/user/avatar");
+
+  // React Hook Form for Profile
+  const profileForm = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileSchema) as any,
+    defaultValues: {
+      name: "",
+      phone: "",
+    },
+  });
+
+  // React Hook Form for Password
+  const passwordForm = useForm<PasswordFormValues>({
+    resolver: zodResolver(passwordSchema) as any,
+    defaultValues: {
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    },
+  });
+
+  // Active profile computation with fallbacks
+  const profile: UserProfileData = React.useMemo(() => {
+    if (profileData?.user) {
+      return profileData.user;
     }
-  };
+    return {
+      id: initialUser?.id || session?.user?.id || "",
+      name: initialUser?.name || session?.user?.name || "Workspace Member",
+      email: initialUser?.email || session?.user?.email || "user@example.com",
+      phone: initialUser?.phone || "",
+      role: initialUser?.role || (session?.user as any)?.role || "moderator",
+      image: initialUser?.image || session?.user?.image || null,
+      imagePublicId: initialUser?.imagePublicId || null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  }, [profileData, initialUser, session]);
 
+  // Synchronize profile form with fetched profile
   useEffect(() => {
-    fetchProfile();
-  }, []);
-
-  // Update Profile Info (Name & Phone)
-  const handleUpdateProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsUpdatingProfile(true);
-    setProfileFeedback(null);
-
-    try {
-      const res = await fetch("/api/user/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: editName,
-          phone: editPhone,
-        }),
+    if (profile) {
+      profileForm.reset({
+        name: profile.name || "",
+        phone: profile.phone || "",
       });
+    }
+  }, [profile.name, profile.phone, profileForm]);
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to update profile details");
-      }
-
+  // Submit Profile Changes
+  const onProfileSubmit = async (values: ProfileFormValues) => {
+    setProfileFeedback(null);
+    try {
+      await updateProfileMutation(values);
+      await refetchProfile();
       setProfileFeedback({
         type: "success",
         message: "Profile details updated successfully!",
       });
-
-      if (profile) {
-        setProfile({
-          ...profile,
-          name: editName,
-          phone: editPhone,
-        });
-      }
       setTimeout(() => setProfileFeedback(null), 4000);
     } catch (err: any) {
       setProfileFeedback({
         type: "error",
-        message: err?.message || "Failed to save profile changes",
+        message:
+          err?.response?.data?.error ||
+          err?.message ||
+          "Failed to save profile changes",
       });
-    } finally {
-      setIsUpdatingProfile(false);
+    }
+  };
+
+  // Submit Password Change
+  const onPasswordSubmit = async (values: PasswordFormValues) => {
+    setPasswordFeedback(null);
+    try {
+      await updatePasswordMutation({
+        currentPassword: values.currentPassword,
+        newPassword: values.newPassword,
+      });
+      passwordForm.reset();
+      setPasswordFeedback({
+        type: "success",
+        message: "Your password has been changed successfully!",
+      });
+      setTimeout(() => setPasswordFeedback(null), 5000);
+    } catch (err: any) {
+      setPasswordFeedback({
+        type: "error",
+        message:
+          err?.response?.data?.error ||
+          err?.message ||
+          "Failed to update password. Check your current password.",
+      });
     }
   };
 
@@ -184,43 +227,27 @@ export default function ProfileDashboard({ user: initialUser }: ProfileDashboard
       return;
     }
 
-    setIsUploadingAvatar(true);
     setAvatarFeedback(null);
-
     try {
       const formData = new FormData();
       formData.append("avatar", file);
 
-      const res = await fetch("/api/user/avatar", {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to upload avatar image");
-      }
-
+      await uploadAvatarMutation(formData);
+      await refetchProfile();
       setAvatarFeedback({
         type: "success",
         message: "Avatar photo updated successfully!",
       });
-
-      if (profile) {
-        setProfile({
-          ...profile,
-          image: data.image,
-          imagePublicId: data.imagePublicId,
-        });
-      }
       setTimeout(() => setAvatarFeedback(null), 4000);
     } catch (err: any) {
       setAvatarFeedback({
         type: "error",
-        message: err?.message || "Failed to upload profile picture",
+        message:
+          err?.response?.data?.error ||
+          err?.message ||
+          "Failed to upload profile picture",
       });
     } finally {
-      setIsUploadingAvatar(false);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -231,100 +258,27 @@ export default function ProfileDashboard({ user: initialUser }: ProfileDashboard
   const handleDeleteAvatar = async () => {
     if (!confirm("Are you sure you want to remove your profile photo?")) return;
 
-    setIsDeletingAvatar(true);
     setAvatarFeedback(null);
-
     try {
-      const res = await fetch("/api/user/avatar", {
-        method: "DELETE",
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to delete avatar image");
-      }
-
+      await deleteAvatarMutation(undefined);
+      await refetchProfile();
       setAvatarFeedback({
         type: "success",
         message: "Avatar removed. Using default avatar.",
       });
-
-      if (profile) {
-        setProfile({
-          ...profile,
-          image: null,
-          imagePublicId: null,
-        });
-      }
       setTimeout(() => setAvatarFeedback(null), 4000);
     } catch (err: any) {
       setAvatarFeedback({
         type: "error",
-        message: err?.message || "Failed to remove avatar picture",
+        message:
+          err?.response?.data?.error ||
+          err?.message ||
+          "Failed to remove avatar picture",
       });
-    } finally {
-      setIsDeletingAvatar(false);
     }
   };
 
-  // Change Password
-  const handleChangePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setPasswordFeedback(null);
-
-    if (newPassword.length < 6) {
-      setPasswordFeedback({
-        type: "error",
-        message: "New password must be at least 6 characters long.",
-      });
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setPasswordFeedback({
-        type: "error",
-        message: "New password and confirmation do not match.",
-      });
-      return;
-    }
-
-    setIsChangingPassword(true);
-
-    try {
-      const res = await fetch("/api/user/password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          currentPassword,
-          newPassword,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to update password");
-      }
-
-      setPasswordFeedback({
-        type: "success",
-        message: "Your password has been changed successfully!",
-      });
-
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-      setTimeout(() => setPasswordFeedback(null), 5000);
-    } catch (err: any) {
-      setPasswordFeedback({
-        type: "error",
-        message: err?.message || "Failed to update password. Check your current password.",
-      });
-    } finally {
-      setIsChangingPassword(false);
-    }
-  };
-
-  const currentRole = ((profile?.role || (session?.user as any)?.role || "user")).toLowerCase();
+  const currentRole = (profile?.role || (session?.user as any)?.role || "user").toLowerCase();
   const isAdmin = currentRole === "admin";
   const isModerator = currentRole === "moderator";
 
@@ -500,7 +454,7 @@ export default function ProfileDashboard({ user: initialUser }: ProfileDashboard
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6">
-                <form onSubmit={handleUpdateProfile} className="space-y-4">
+                <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4">
                   {profileFeedback && (
                     <div
                       className={`p-3 rounded-xl text-xs flex items-center gap-2 ${
@@ -525,12 +479,15 @@ export default function ProfileDashboard({ user: initialUser }: ProfileDashboard
                       </Label>
                       <Input
                         id="prof-name"
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
+                        {...profileForm.register("name")}
                         placeholder="Your full name"
                         className="bg-paper border-stone-300 text-xs h-9 rounded-xl"
-                        required
                       />
+                      {profileForm.formState.errors.name && (
+                        <p className="text-[11px] text-rose-600 font-medium">
+                          {profileForm.formState.errors.name.message}
+                        </p>
+                      )}
                     </div>
 
                     <div className="space-y-1.5">
@@ -541,12 +498,16 @@ export default function ProfileDashboard({ user: initialUser }: ProfileDashboard
                         <Phone className="absolute left-2.5 top-2.5 h-4 w-4 text-stone-400" />
                         <Input
                           id="prof-phone"
-                          value={editPhone}
-                          onChange={(e) => setEditPhone(e.target.value)}
+                          {...profileForm.register("phone")}
                           placeholder="+1 555-0199"
                           className="bg-paper border-stone-300 text-xs h-9 pl-9 rounded-xl"
                         />
                       </div>
+                      {profileForm.formState.errors.phone && (
+                        <p className="text-[11px] text-rose-600 font-medium">
+                          {profileForm.formState.errors.phone.message}
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -598,7 +559,7 @@ export default function ProfileDashboard({ user: initialUser }: ProfileDashboard
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6">
-                <form onSubmit={handleChangePassword} className="space-y-4">
+                <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
                   {passwordFeedback && (
                     <div
                       className={`p-3 rounded-xl text-xs flex items-center gap-2 ${
@@ -625,11 +586,9 @@ export default function ProfileDashboard({ user: initialUser }: ProfileDashboard
                       <Input
                         id="cur-pass"
                         type={showCurrentPassword ? "text" : "password"}
-                        value={currentPassword}
-                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        {...passwordForm.register("currentPassword")}
                         placeholder="Enter your current password"
                         className="bg-paper border-stone-300 text-xs h-9 pl-9 pr-9 rounded-xl"
-                        required
                       />
                       <button
                         type="button"
@@ -643,6 +602,11 @@ export default function ProfileDashboard({ user: initialUser }: ProfileDashboard
                         )}
                       </button>
                     </div>
+                    {passwordForm.formState.errors.currentPassword && (
+                      <p className="text-[11px] text-rose-600 font-medium">
+                        {passwordForm.formState.errors.currentPassword.message}
+                      </p>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -655,11 +619,9 @@ export default function ProfileDashboard({ user: initialUser }: ProfileDashboard
                         <Input
                           id="new-pass"
                           type={showNewPassword ? "text" : "password"}
-                          value={newPassword}
-                          onChange={(e) => setNewPassword(e.target.value)}
+                          {...passwordForm.register("newPassword")}
                           placeholder="Min. 6 characters"
                           className="bg-paper border-stone-300 text-xs h-9 pl-9 pr-9 rounded-xl"
-                          required
                         />
                         <button
                           type="button"
@@ -673,6 +635,11 @@ export default function ProfileDashboard({ user: initialUser }: ProfileDashboard
                           )}
                         </button>
                       </div>
+                      {passwordForm.formState.errors.newPassword && (
+                        <p className="text-[11px] text-rose-600 font-medium">
+                          {passwordForm.formState.errors.newPassword.message}
+                        </p>
+                      )}
                     </div>
 
                     <div className="space-y-1.5">
@@ -684,11 +651,9 @@ export default function ProfileDashboard({ user: initialUser }: ProfileDashboard
                         <Input
                           id="conf-pass"
                           type={showConfirmPassword ? "text" : "password"}
-                          value={confirmPassword}
-                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          {...passwordForm.register("confirmPassword")}
                           placeholder="Repeat new password"
                           className="bg-paper border-stone-300 text-xs h-9 pl-9 pr-9 rounded-xl"
-                          required
                         />
                         <button
                           type="button"
@@ -702,6 +667,11 @@ export default function ProfileDashboard({ user: initialUser }: ProfileDashboard
                           )}
                         </button>
                       </div>
+                      {passwordForm.formState.errors.confirmPassword && (
+                        <p className="text-[11px] text-rose-600 font-medium">
+                          {passwordForm.formState.errors.confirmPassword.message}
+                        </p>
+                      )}
                     </div>
                   </div>
 

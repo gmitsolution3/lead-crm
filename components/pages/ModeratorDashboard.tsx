@@ -6,8 +6,8 @@ import { LeadDetailSheet } from "@/components/features/leads/LeadDetailSheet";
 import { LeadPipelineModal } from "@/components/features/leads/LeadPipelineModal";
 import { useFetch } from "@/hooks";
 import { useSession } from "@/lib/auth-client";
-import { Lead, SearchGroup } from "@/types";
-import type { User, ActivityEvent } from "@/types";
+import { Lead } from "@/types";
+import type { User } from "@/types";
 import { Card } from "@/components/ui/card";
 import {
   Table,
@@ -53,17 +53,44 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
   const { data: session } = useSession();
   const effectiveUser = user || session?.user;
 
-  // SWR fetch for search groups and leads
-  const { data: searchGroupsData } = useFetch<any>("/search-groups");
+  // Dedicated database-driven moderator dashboard endpoint
+  const {
+    data: dashboardResponse,
+    isLoading,
+    refetch: refetchDashboard,
+  } = useFetch<any>("/dashboard/moderator", { userId: effectiveUser?.id });
 
-  const groups: SearchGroup[] = useMemo(() => {
-    const raw = searchGroupsData?.data || searchGroupsData;
-    return Array.isArray(raw) ? raw : [];
-  }, [searchGroupsData]);
+  const dashboardData = dashboardResponse?.data;
 
-  const leads: Lead[] = useMemo(() => {
-    return groups.flatMap((g) => g.leads || []);
-  }, [groups]);
+  // Extracted metrics directly from database-driven aggregation
+  const stageStats = dashboardData?.stageStats || {
+    uncontacted: 0,
+    called: 0,
+    call_later: 0,
+    interested: 0,
+    converted: 0,
+    not_interested: 0,
+    invalid: 0,
+  };
+
+  const totalLeads: number = dashboardData?.totalLeads ?? 0;
+
+  const kpiStats = dashboardData?.kpiStats || {
+    dailyTarget: 25,
+    todayCount: 0,
+    moderatorTodayCount: 0,
+    yesterdayCount: 0,
+    remainingToGo: 25,
+    progressPercent: 0,
+    isTargetMet: false,
+    calledToday: 0,
+    interestedToday: 0,
+    callLaterToday: 0,
+  };
+
+  const todayFollowUps: any[] = dashboardData?.todayFollowUps || [];
+  const hotProspects: Lead[] = dashboardData?.hotProspects || [];
+  const recentLeads: Lead[] = dashboardData?.recentLeads || [];
 
   // Lead detail sheet state
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -98,149 +125,6 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
     setSelectedLead(lead);
     setIsSheetOpen(true);
   };
-
-  // Daily Approach KPI Target (fetched from settings, defaults to 25)
-  const [dailyTarget, setDailyTarget] = useState<number>(25);
-
-  useEffect(() => {
-    fetch("/api/admin/settings")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data?.settings?.dailyApproachTarget) {
-          setDailyTarget(data.settings.dailyApproachTarget);
-        }
-      })
-      .catch(() => {});
-  }, []);
-
-  // Daily Approach & Contact Target KPI Calculations
-  const kpiStats = useMemo(() => {
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const startOfYesterday = startOfToday - 86400000;
-    const endOfYesterday = startOfToday - 1;
-
-    const isLeadApproached = (l: Lead) => {
-      const hasContactTimestamp = Boolean(l.lastContactedAt && l.lastContactedAt > 0);
-      const isContactedStatus = Boolean(l.status && l.status !== "uncontacted");
-      const hasCalls = Boolean(l.callCount && l.callCount > 0);
-      const hasNotes = Boolean(l.notes && l.notes.length > 0);
-      return hasContactTimestamp || isContactedStatus || hasCalls || hasNotes;
-    };
-
-    const getLeadContactTimestamp = (l: Lead): number => {
-      if (l.lastContactedAt) return Number(l.lastContactedAt);
-      if (l.notes && l.notes.length > 0) {
-        return Math.max(...l.notes.map((n) => Number(n.createdAt) || 0));
-      }
-      if (l.updatedAt) {
-        const t = new Date(l.updatedAt).getTime();
-        if (!isNaN(t)) return t;
-      }
-      return new Date(l.createdAt).getTime() || 0;
-    };
-
-    const contactedLeads = leads.filter(isLeadApproached);
-
-    const todayContacted = contactedLeads.filter((l) => {
-      const ts = getLeadContactTimestamp(l);
-      return ts >= startOfToday;
-    });
-
-    const yesterdayContacted = contactedLeads.filter((l) => {
-      const ts = getLeadContactTimestamp(l);
-      return ts >= startOfYesterday && ts <= endOfYesterday;
-    });
-
-    // Moderator-specific attribution (or pool fallback if unassigned)
-    const moderatorToday = todayContacted.filter((l) => {
-      if (l.lastContactedBy?.userId && effectiveUser?.id) {
-        return l.lastContactedBy.userId === effectiveUser.id;
-      }
-      if (l.assignedTo?.userId && effectiveUser?.id) {
-        return l.assignedTo.userId === effectiveUser.id;
-      }
-      return true;
-    });
-
-    const moderatorTodayCount = moderatorToday.length;
-    const remainingToGo = Math.max(0, dailyTarget - moderatorTodayCount);
-    const progressPercent = Math.min(100, Math.round((moderatorTodayCount / dailyTarget) * 100));
-
-    return {
-      dailyTarget,
-      todayCount: todayContacted.length,
-      moderatorTodayCount,
-      yesterdayCount: yesterdayContacted.length,
-      remainingToGo,
-      progressPercent,
-      isTargetMet: moderatorTodayCount >= dailyTarget,
-      calledToday: todayContacted.filter((l) => l.status === "called").length,
-      interestedToday: todayContacted.filter((l) => l.status === "interested" || l.status === "converted").length,
-      callLaterToday: todayContacted.filter((l) => l.status === "call_later").length,
-    };
-  }, [leads, dailyTarget, effectiveUser]);
-
-  // Today's Scheduled Follow-Up Calls (Due Today or Overdue)
-  const todayFollowUps = useMemo(() => {
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const endOfToday = startOfToday + 86400000 - 1;
-
-    return leads
-      .filter((l) => {
-        if (!l.followUpDate) return false;
-        if (["converted", "not_interested", "invalid"].includes(l.status || "")) return false;
-        const ts = Number(l.followUpDate);
-        return ts <= endOfToday;
-      })
-      .map((lead) => {
-        const ts = Number(lead.followUpDate);
-        const isOverdue = ts < Date.now();
-        const isDueNow = Math.abs(ts - Date.now()) <= 1000 * 60 * 30; // within 30 min
-
-        const callNotes = lead.notes || [];
-        const lastCallNote = callNotes[callNotes.length - 1];
-
-        return {
-          lead,
-          followUpTs: ts,
-          isOverdue,
-          isDueNow,
-          lastCallNote,
-        };
-      })
-      .sort((a, b) => a.followUpTs - b.followUpTs);
-  }, [leads]);
-
-  // Priority cold outreach prospects (uncontacted with valid phone & no website)
-  const hotProspects = useMemo(() => {
-    return leads
-      .filter((l) => (!l.status || l.status === "uncontacted") && Boolean(l.phone) && !l.website)
-      .slice(0, 4);
-  }, [leads]);
-
-  // Stage breakdown
-  const stageStats = useMemo(() => {
-    const counts = {
-      uncontacted: 0,
-      called: 0,
-      call_later: 0,
-      interested: 0,
-      converted: 0,
-      not_interested: 0,
-      invalid: 0,
-    };
-    leads.forEach((l) => {
-      const s = (l.status || "uncontacted") as keyof typeof counts;
-      if (counts[s] !== undefined) {
-        counts[s]++;
-      } else {
-        counts.uncontacted++;
-      }
-    });
-    return counts;
-  }, [leads]);
 
   return (
     <div className="space-y-8 animate-fade-in pb-16 font-sans">
@@ -308,7 +192,7 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
               All Monitored
             </span>
             <span className="text-xl font-extrabold text-botanical-900 mt-0.5">
-              {leads.length}
+              {totalLeads}
             </span>
             <span className="text-[10px] text-stone-400">Total in queue</span>
           </button>
@@ -819,12 +703,12 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
               onClick={() => router.push("/leads")}
               className="text-xs h-8 text-botanical-800 border-stone-200 cursor-pointer"
             >
-              View All in Leads Table ({leads.length})
+              View All in Leads Table ({totalLeads})
             </Button>
           </div>
         </div>
 
-        {leads.length === 0 ? (
+        {recentLeads.length === 0 ? (
           <div className="rounded-2xl border border-stone-200 bg-[#FCFBF8] p-8 text-center text-xs text-stone-500">
             No leads captured yet. Captured leads will appear here.
           </div>
@@ -841,7 +725,7 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {leads.slice(0, 5).map((lead, idx) => {
+                {recentLeads.map((lead: Lead, idx: number) => {
                   const isEven = idx % 2 === 1;
                   return (
                     <TableRow
@@ -953,6 +837,7 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
           ) {
             setPipelineLead(updated);
           }
+          refetchDashboard();
         }}
       />
 
@@ -971,6 +856,7 @@ export default function ModeratorDashboard({ user }: ModeratorDashboardProps) {
           ) {
             setSelectedLead(updatedLead);
           }
+          refetchDashboard();
           setSyncFeedback(`Successfully logged call & updated ${updatedLead.name}!`);
           setTimeout(() => setSyncFeedback(null), 3000);
         }}

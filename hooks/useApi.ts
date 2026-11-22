@@ -19,6 +19,16 @@ function normalizeKey(url: string): string {
 }
 
 /**
+ * Resolves axios configuration. If url starts with /api/, uses current origin (Next.js route).
+ */
+function resolveConfig(url: string, userConfig?: AxiosRequestConfig): AxiosRequestConfig {
+  if (url.startsWith("/api/")) {
+    return { baseURL: "", ...userConfig };
+  }
+  return userConfig || {};
+}
+
+/**
  * 1. useFetch: Hook to fetch list or resource data with caching & revalidation.
  * Example:
  * const { data, isLoading, isError, error, refetch } = useFetch("/leads");
@@ -41,7 +51,7 @@ export function useFetch<TData = any>(
     queryFn: async () => {
       const response = await apiClient.get<TData>(url, {
         params,
-        ...axiosConfig,
+        ...resolveConfig(url, axiosConfig),
       });
       return response.data;
     },
@@ -81,7 +91,7 @@ export function useFetchById<TData = any>(
     queryFn: async () => {
       const response = await apiClient.get<TData>(
         `${cleanUrl}/${id}`,
-        axiosConfig,
+        resolveConfig(cleanUrl, axiosConfig),
       );
       return response.data;
     },
@@ -129,7 +139,7 @@ export function usePost<TData = any, TVariables = any>(
       const response = await apiClient.post<TData>(
         url,
         variables,
-        axiosConfig,
+        resolveConfig(url, axiosConfig),
       );
       return response.data;
     },
@@ -190,7 +200,7 @@ export function usePatch<TData = any, TVariables = any>(
         const response = await apiClient.patch<TData>(
           endpoint,
           variables.data,
-          axiosConfig,
+          resolveConfig(endpoint, axiosConfig),
         );
         return response.data;
       }
@@ -198,7 +208,7 @@ export function usePatch<TData = any, TVariables = any>(
       const response = await apiClient.patch<TData>(
         url,
         variables,
-        axiosConfig,
+        resolveConfig(url, axiosConfig),
       );
       return response.data;
     },
@@ -265,7 +275,7 @@ export function useDelete<
         const endpoint = `${cleanUrl}/${variables}`;
         const response = await apiClient.delete<TData>(
           endpoint,
-          axiosConfig,
+          resolveConfig(endpoint, axiosConfig),
         );
         return response.data;
       }
@@ -273,14 +283,14 @@ export function useDelete<
       if (variables && typeof variables === "object" && "params" in variables) {
         const response = await apiClient.delete<TData>(url, {
           params: (variables as any).params,
-          ...axiosConfig,
+          ...resolveConfig(url, axiosConfig),
         });
         return response.data;
       }
 
       const response = await apiClient.delete<TData>(url, {
         data: variables,
-        ...axiosConfig,
+        ...resolveConfig(url, axiosConfig),
       });
       return response.data;
     },
