@@ -11,6 +11,30 @@ export interface SearchGroup {
   leads?: Lead[];
 }
 
+export type LeadStatus =
+  | "uncontacted"
+  | "called"
+  | "call_later"
+  | "interested"
+  | "not_interested"
+  | "converted"
+  | "invalid";
+
+export type LeadPriority = "low" | "medium" | "high";
+
+export interface LeadUser {
+  userId?: string;
+  name?: string;
+  email?: string;
+}
+
+export interface LeadNote {
+  noteId: string;
+  content: string;
+  createdAt: number;
+  createdBy?: LeadUser;
+}
+
 export interface Lead {
   id?: string;
   leadId: string;
@@ -27,6 +51,15 @@ export interface Lead {
   linkedin?: string;
   whatsapp?: string;
   remark?: string;
+  status?: LeadStatus;
+  priority?: LeadPriority;
+  followUpDate?: number | null;
+  dealValue?: number;
+  lastContactedAt?: number | null;
+  callCount?: number;
+  assignedTo?: LeadUser;
+  lastContactedBy?: LeadUser;
+  notes?: LeadNote[];
   createdAt: string | number;
   updatedAt: string | number;
 }

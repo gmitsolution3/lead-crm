@@ -36,18 +36,23 @@ import {
 } from "@/components/ui/table";
 import { useFetch, usePatch } from "@/hooks";
 import { formatDate } from "@/lib/utils";
-import type { User } from "@/types";
+import { useSession } from "@/lib/auth-client";
+import { apiClient } from "@/lib/axios";
+import type { User, LeadStatus, LeadPriority } from "@/types";
 import { Lead, SearchGroup } from "@/types";
 import { LeadFormModal } from "@/components/features/leads/LeadFormModal";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft,
   ArrowUpDown,
+  Calendar,
   CheckCircle2,
+  Clock,
   Download,
   ExternalLink,
   Filter,
   FilterX,
+  Flame,
   Globe,
   Loader2,
   Mail,
@@ -56,6 +61,7 @@ import {
   RotateCcw,
   Search,
   Target,
+  UserCheck,
   Users,
 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -70,6 +76,7 @@ export default function LeadsDashboard({
   user,
   groupId,
 }: LeadsDashboardProps) {
+  const { data: session } = useSession();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -94,6 +101,10 @@ export default function LeadsDashboard({
   const initialSearch = searchParams?.get("search") || "";
   const initialSource = searchParams?.get("source") || "all";
   const initialWebsite = (searchParams?.get("websiteFilter") as any) || "all";
+  const initialStatus = searchParams?.get("status") || "all";
+  const initialPriority = searchParams?.get("priority") || "all";
+  const initialFollowUp = searchParams?.get("followUp") || "all";
+  const initialAssignedTo = searchParams?.get("assignedTo") || "all";
   const initialSortBy = (searchParams?.get("sortBy") as any) || "default";
   const initialPage = Math.max(1, Number(searchParams?.get("page")) || 1);
   const initialLimit = Math.max(1, Number(searchParams?.get("limit")) || 10);
@@ -104,9 +115,11 @@ export default function LeadsDashboard({
   const [websiteFilter, setWebsiteFilter] = useState<
     "all" | "no-website" | "has-website"
   >(initialWebsite);
-  const [sortBy, setSortBy] = useState<
-    "default" | "newest" | "oldest" | "name_asc" | "name_desc"
-  >(initialSortBy);
+  const [statusFilter, setStatusFilter] = useState<string>(initialStatus);
+  const [priorityFilter, setPriorityFilter] = useState<string>(initialPriority);
+  const [followUpFilter, setFollowUpFilter] = useState<string>(initialFollowUp);
+  const [assignedToFilter, setAssignedToFilter] = useState<string>(initialAssignedTo);
+  const [sortBy, setSortBy] = useState<string>(initialSortBy);
   const [page, setPage] = useState<number>(initialPage);
   const [limit, setLimit] = useState<number>(initialLimit);
 
@@ -125,6 +138,10 @@ export default function LeadsDashboard({
     if (debouncedSearch) params.set("search", debouncedSearch);
     if (sourceFilter !== "all") params.set("source", sourceFilter);
     if (websiteFilter !== "all") params.set("websiteFilter", websiteFilter);
+    if (statusFilter !== "all") params.set("status", statusFilter);
+    if (priorityFilter !== "all") params.set("priority", priorityFilter);
+    if (followUpFilter !== "all") params.set("followUp", followUpFilter);
+    if (assignedToFilter !== "all") params.set("assignedTo", assignedToFilter);
     if (sortBy !== "default") params.set("sortBy", sortBy);
     if (page > 1) params.set("page", String(page));
     if (limit !== 10) params.set("limit", String(limit));
@@ -136,6 +153,10 @@ export default function LeadsDashboard({
     debouncedSearch,
     sourceFilter,
     websiteFilter,
+    statusFilter,
+    priorityFilter,
+    followUpFilter,
+    assignedToFilter,
     sortBy,
     page,
     limit,
@@ -151,6 +172,16 @@ export default function LeadsDashboard({
       source: sourceFilter !== "all" ? sourceFilter : undefined,
       websiteFilter:
         websiteFilter !== "all" ? websiteFilter : undefined,
+      status: statusFilter !== "all" ? statusFilter : undefined,
+      priority: priorityFilter !== "all" ? priorityFilter : undefined,
+      followUpFilter:
+        followUpFilter !== "all" ? followUpFilter : undefined,
+      assignedTo:
+        assignedToFilter === "me"
+          ? session?.user?.id || session?.user?.email
+          : assignedToFilter !== "all"
+          ? assignedToFilter
+          : undefined,
       groupId: targetGroupId || undefined,
       sortBy: sortBy !== "default" ? sortBy : undefined,
     };
@@ -160,6 +191,12 @@ export default function LeadsDashboard({
     debouncedSearch,
     sourceFilter,
     websiteFilter,
+    statusFilter,
+    priorityFilter,
+    followUpFilter,
+    assignedToFilter,
+    session?.user?.id,
+    session?.user?.email,
     targetGroupId,
     sortBy,
   ]);
@@ -201,6 +238,10 @@ export default function LeadsDashboard({
   const hasActiveFilters = Boolean(
     sourceFilter !== "all" ||
     websiteFilter !== "all" ||
+    statusFilter !== "all" ||
+    priorityFilter !== "all" ||
+    followUpFilter !== "all" ||
+    assignedToFilter !== "all" ||
     debouncedSearch ||
     tableSearch ||
     sortBy !== "default"
@@ -209,10 +250,116 @@ export default function LeadsDashboard({
   const handleResetFilters = useCallback(() => {
     setSourceFilter("all");
     setWebsiteFilter("all");
+    setStatusFilter("all");
+    setPriorityFilter("all");
+    setFollowUpFilter("all");
+    setAssignedToFilter("all");
     setTableSearch("");
     setSortBy("default");
     setPage(1);
   }, []);
+
+  // Quick 1-click status change from table row
+  const handleQuickStatusChange = async (
+    leadId: string,
+    newStatus: LeadStatus,
+  ) => {
+    try {
+      await apiClient.patch(`/leads/${leadId}`, {
+        status: newStatus,
+        groupId: targetGroupId,
+        lastContactedBy: session?.user
+          ? {
+              userId: session.user.id,
+              name: session.user.name,
+              email: session.user.email,
+            }
+          : undefined,
+      });
+      refetchLeads();
+      setSyncFeedback(`Status updated to "${newStatus.replace("_", " ")}"`);
+      setTimeout(() => setSyncFeedback(null), 2500);
+    } catch (err) {
+      console.error("Failed to update status:", err);
+    }
+  };
+
+  const getStatusBadge = (status?: LeadStatus) => {
+    switch (status) {
+      case "called":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-800 border border-amber-300 shadow-2xs hover:bg-amber-200 transition-colors">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-600" />
+            Called
+          </span>
+        );
+      case "call_later":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-100 text-blue-800 border border-blue-300 shadow-2xs hover:bg-blue-200 transition-colors">
+            <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />
+            Call Later
+          </span>
+        );
+      case "interested":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs hover:bg-emerald-200 transition-colors">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
+            Interested 🔥
+          </span>
+        );
+      case "not_interested":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-100 text-rose-800 border border-rose-300 shadow-2xs hover:bg-rose-200 transition-colors">
+            <span className="h-1.5 w-1.5 rounded-full bg-rose-600" />
+            Not Interested
+          </span>
+        );
+      case "converted":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-green-100 text-green-900 border border-green-300 shadow-2xs hover:bg-green-200 transition-colors">
+            <span className="h-1.5 w-1.5 rounded-full bg-green-700" />
+            Converted 🎉
+          </span>
+        );
+      case "invalid":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-zinc-200 text-zinc-700 border border-zinc-300 shadow-2xs hover:bg-zinc-300 transition-colors">
+            <span className="h-1.5 w-1.5 rounded-full bg-zinc-500" />
+            Invalid
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-stone-100 text-stone-700 border border-stone-300 shadow-2xs hover:bg-stone-200 transition-colors">
+            <span className="h-1.5 w-1.5 rounded-full bg-stone-400" />
+            Uncontacted
+          </span>
+        );
+    }
+  };
+
+  const getPriorityBadge = (priority?: LeadPriority) => {
+    switch (priority) {
+      case "high":
+        return (
+          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+            🔥 High
+          </span>
+        );
+      case "low":
+        return (
+          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] font-semibold bg-stone-100 text-stone-600 border border-stone-200">
+            ❄️ Low
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+            ⚡ Med
+          </span>
+        );
+    }
+  };
 
   // Reusable SWR mutation for remark saving with automatic cache invalidation
   const { mutateAsync: patchLeadRemark } = usePatch("/leads", {
@@ -319,6 +466,12 @@ export default function LeadsDashboard({
     const headers = [
       "Lead ID",
       "Name",
+      "Status",
+      "Priority",
+      "Follow-Up Date",
+      "Deal Value",
+      "Dealt By",
+      "Calls Made",
       "Phone",
       "Email",
       "Website",
@@ -336,6 +489,12 @@ export default function LeadsDashboard({
     const rows = leadsToExport.map((l) => [
       `"${l.leadId}"`,
       `"${(l.name || "").replace(/"/g, '""')}"`,
+      `"${l.status || "uncontacted"}"`,
+      `"${l.priority || "medium"}"`,
+      `"${l.followUpDate ? new Date(l.followUpDate).toISOString().slice(0, 10) : ""}"`,
+      `"${l.dealValue || 0}"`,
+      `"${(l.assignedTo?.name || l.lastContactedBy?.name || "").replace(/"/g, '""')}"`,
+      `"${l.callCount || 0}"`,
       `"${l.phone || ""}"`,
       `"${l.email || ""}"`,
       `"${l.website || ""}"`,
@@ -417,6 +576,30 @@ export default function LeadsDashboard({
                 {potentialCount} Potential{" "}
                 {potentialCount === 1 ? "Client" : "Clients"} (No
                 Website)
+              </Badge>
+            )}
+            {meta.interestedCount !== undefined && meta.interestedCount > 0 && (
+              <Badge
+                variant="default"
+                className="text-[10px] gap-1 font-semibold bg-emerald-100 text-emerald-800 border-emerald-300"
+              >
+                🔥 {meta.interestedCount} Interested
+              </Badge>
+            )}
+            {meta.overdueCount !== undefined && meta.overdueCount > 0 && (
+              <Badge
+                variant="terracotta"
+                className="text-[10px] gap-1 font-semibold bg-rose-100 text-rose-800 border-rose-300 animate-pulse"
+              >
+                ⚠️ {meta.overdueCount} Overdue Follow-up
+              </Badge>
+            )}
+            {meta.convertedCount !== undefined && meta.convertedCount > 0 && (
+              <Badge
+                variant="default"
+                className="text-[10px] gap-1 font-semibold bg-green-100 text-green-900 border-green-300"
+              >
+                🎉 {meta.convertedCount} Converted
               </Badge>
             )}
             {group?.groupId && (
@@ -557,8 +740,114 @@ export default function LeadsDashboard({
               </div>
             </div>
 
-            {/* 2. Platform Source Filter */}
-            <div className="flex flex-col gap-1 w-full sm:w-auto min-w-[180px]">
+            {/* 2. Outreach Status Filter */}
+            <div className="flex flex-col gap-1 w-full sm:w-auto min-w-[150px]">
+              <label className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">
+                Outreach Status
+              </label>
+              <Select
+                value={statusFilter}
+                onValueChange={(val) => {
+                  setStatusFilter(val || "all");
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="h-9 text-xs bg-oatmeal-100/60 border-stone-200 text-stone-700 rounded-xl">
+                  <SelectValue placeholder="Status: All" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Status: All</SelectItem>
+                  <SelectItem value="uncontacted">🔵 Uncontacted</SelectItem>
+                  <SelectItem value="called">📞 Called</SelectItem>
+                  <SelectItem value="call_later">⏰ Call Later</SelectItem>
+                  <SelectItem value="interested">🔥 Interested</SelectItem>
+                  <SelectItem value="not_interested">🚫 Not Interested</SelectItem>
+                  <SelectItem value="converted">🎉 Converted</SelectItem>
+                  <SelectItem value="invalid">❌ Invalid</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* 3. Priority Filter */}
+            <div className="flex flex-col gap-1 w-full sm:w-auto min-w-[130px]">
+              <label className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">
+                Priority
+              </label>
+              <Select
+                value={priorityFilter}
+                onValueChange={(val) => {
+                  setPriorityFilter(val || "all");
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="h-9 text-xs bg-oatmeal-100/60 border-stone-200 text-stone-700 rounded-xl">
+                  <SelectValue placeholder="Priority: All" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Priority: All</SelectItem>
+                  <SelectItem value="high">🔥 High Priority</SelectItem>
+                  <SelectItem value="medium">⚡ Medium</SelectItem>
+                  <SelectItem value="low">❄️ Low Priority</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* 4. Follow-Up Schedule Filter */}
+            <div className="flex flex-col gap-1 w-full sm:w-auto min-w-[150px]">
+              <label className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">
+                Follow-Up Schedule
+              </label>
+              <Select
+                value={followUpFilter}
+                onValueChange={(val) => {
+                  setFollowUpFilter(val || "all");
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="h-9 text-xs bg-oatmeal-100/60 border-stone-200 text-stone-700 rounded-xl">
+                  <div className="flex items-center gap-1.5">
+                    <Calendar className="h-3 w-3 text-stone-500 shrink-0" />
+                    <SelectValue placeholder="Follow-Up: All" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Follow-Up: All</SelectItem>
+                  <SelectItem value="overdue">⚠️ Overdue Follow-ups</SelectItem>
+                  <SelectItem value="today">📅 Due Today</SelectItem>
+                  <SelectItem value="upcoming">⏳ Upcoming</SelectItem>
+                  <SelectItem value="has-followup">📌 Has Follow-up Set</SelectItem>
+                  <SelectItem value="no-followup">No Follow-up</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* 5. Dealt By Filter */}
+            <div className="flex flex-col gap-1 w-full sm:w-auto min-w-[130px]">
+              <label className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">
+                Dealt By
+              </label>
+              <Select
+                value={assignedToFilter}
+                onValueChange={(val) => {
+                  setAssignedToFilter(val || "all");
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="h-9 text-xs bg-oatmeal-100/60 border-stone-200 text-stone-700 rounded-xl">
+                  <div className="flex items-center gap-1.5">
+                    <UserCheck className="h-3 w-3 text-stone-500 shrink-0" />
+                    <SelectValue placeholder="Dealt By: All" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Dealt By: All</SelectItem>
+                  <SelectItem value="me">Assigned to Me</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* 6. Platform Source Filter */}
+            <div className="flex flex-col gap-1 w-full sm:w-auto min-w-[150px]">
               <label className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">
                 Platform Source
               </label>
@@ -586,8 +875,8 @@ export default function LeadsDashboard({
               </Select>
             </div>
 
-            {/* 3. Sort Order */}
-            <div className="flex flex-col gap-1 w-full sm:w-auto min-w-[210px]">
+            {/* 7. Sort Order */}
+            <div className="flex flex-col gap-1 w-full sm:w-auto min-w-[190px]">
               <label className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">
                 Sort Order
               </label>
@@ -613,6 +902,15 @@ export default function LeadsDashboard({
                   </SelectItem>
                   <SelectItem value="oldest">
                     Oldest Captured First
+                  </SelectItem>
+                  <SelectItem value="followup_asc">
+                    Follow-Up (Soonest First)
+                  </SelectItem>
+                  <SelectItem value="priority_desc">
+                    Priority (High to Low)
+                  </SelectItem>
+                  <SelectItem value="deal_desc">
+                    Deal Value (High to Low)
                   </SelectItem>
                   <SelectItem value="name_asc">
                     Business Name (A - Z)
@@ -646,25 +944,31 @@ export default function LeadsDashboard({
           <Table>
             <TableHeader>
               <TableRow className="border-b border-stone-200 bg-oatmeal-200/60 hover:bg-oatmeal-200/60">
-                <TableHead className="w-[260px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
-                  Lead / Business Name
-                </TableHead>
-                <TableHead className="w-[200px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
-                  Contact Info
-                </TableHead>
-                <TableHead className="w-[180px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
-                  Website / Status
+                <TableHead className="w-[220px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
+                  Lead / Business
                 </TableHead>
                 <TableHead className="w-[130px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
+                  Status
+                </TableHead>
+                <TableHead className="w-[180px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
+                  Contact Coordinates
+                </TableHead>
+                <TableHead className="w-[160px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
+                  Priority & Follow-Up
+                </TableHead>
+                <TableHead className="w-[130px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
+                  Dealt By
+                </TableHead>
+                <TableHead className="w-[140px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
+                  Website / Opportunity
+                </TableHead>
+                <TableHead className="w-[100px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
                   Source
                 </TableHead>
-                <TableHead className="w-[200px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600">
-                  Search Query
-                </TableHead>
-                <TableHead className="w-[140px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600 text-center">
+                <TableHead className="w-[110px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600 text-center">
                   Social Links
                 </TableHead>
-                <TableHead className="w-[90px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600 text-right">
+                <TableHead className="w-[80px] h-12 px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-stone-600 text-right">
                   Added
                 </TableHead>
               </TableRow>
@@ -674,7 +978,7 @@ export default function LeadsDashboard({
                 <LeadTableSkeletonRows rows={limit > 10 ? 10 : limit} />
               ) : leads.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="p-8 sm:p-12 text-center">
+                  <TableCell colSpan={9} className="p-8 sm:p-12 text-center">
                     <EmptyState
                       compact
                       icon={hasActiveFilters ? FilterX : Users}
@@ -732,22 +1036,105 @@ export default function LeadsDashboard({
                             <p className="font-semibold text-botanical-900 truncate hover:text-botanical-700 transition-colors">
                               {lead.name}
                             </p>
-                            <p className="text-[11px] text-stone-400 truncate max-w-[200px]">
+                            <p className="text-[11px] text-stone-400 truncate max-w-[180px]">
                               {lead.address || "No address"}
                             </p>
                           </div>
                         </div>
                       </TableCell>
 
+                      {/* Status Column with Inline Quick Dropdown */}
+                      <TableCell
+                        className="px-4 py-3.5"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            render={
+                              <button
+                                type="button"
+                                className="outline-none cursor-pointer focus:ring-1 focus:ring-botanical-500 rounded-full"
+                              >
+                                {getStatusBadge(lead.status)}
+                              </button>
+                            }
+                          />
+                          <DropdownMenuContent align="start" className="w-48 p-1">
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleQuickStatusChange(
+                                  lead.leadId,
+                                  "uncontacted",
+                                )
+                              }
+                            >
+                              🔵 Uncontacted (New)
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleQuickStatusChange(lead.leadId, "called")
+                              }
+                            >
+                              📞 Called (Attempted)
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleQuickStatusChange(
+                                  lead.leadId,
+                                  "call_later",
+                                )
+                              }
+                            >
+                              ⏰ Call Later
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleQuickStatusChange(
+                                  lead.leadId,
+                                  "interested",
+                                )
+                              }
+                            >
+                              🔥 Interested (Hot)
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleQuickStatusChange(
+                                  lead.leadId,
+                                  "not_interested",
+                                )
+                              }
+                            >
+                              🚫 Not Interested
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleQuickStatusChange(
+                                  lead.leadId,
+                                  "converted",
+                                )
+                              }
+                            >
+                              🎉 Converted (Won)
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleQuickStatusChange(lead.leadId, "invalid")
+                              }
+                            >
+                              ❌ Invalid / Dead
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+
                       {/* Contact Stack (Email / Phone) */}
                       <TableCell className="px-4 py-3.5">
                         <div className="flex flex-col space-y-1 text-xs">
                           {lead.email ? (
-                            <div className="flex items-center gap-1.5 text-stone-700 font-medium truncate max-w-[200px]">
+                            <div className="flex items-center gap-1.5 text-stone-700 font-medium truncate max-w-[170px]">
                               <Mail className="h-3 w-3 text-sage-600 shrink-0" />
-                              <span className="truncate">
-                                {lead.email}
-                              </span>
+                              <span className="truncate">{lead.email}</span>
                             </div>
                           ) : (
                             <span className="text-[11px] text-stone-400 italic">
@@ -768,6 +1155,71 @@ export default function LeadsDashboard({
                         </div>
                       </TableCell>
 
+                      {/* Priority & Follow-Up */}
+                      <TableCell className="px-4 py-3.5">
+                        <div className="flex flex-col gap-1 text-xs">
+                          <div className="flex items-center gap-1.5">
+                            {getPriorityBadge(lead.priority)}
+                            {lead.dealValue ? (
+                              <span className="text-[10px] font-bold text-botanical-800 bg-sage-100/80 px-1.5 py-0.2 rounded">
+                                ${lead.dealValue}
+                              </span>
+                            ) : null}
+                          </div>
+                          {lead.followUpDate ? (
+                            <div className="flex items-center gap-1 text-[11px]">
+                              <Calendar className="h-3 w-3 text-stone-400 shrink-0" />
+                              {lead.followUpDate < Date.now() &&
+                              ![
+                                "converted",
+                                "not_interested",
+                                "invalid",
+                              ].includes(lead.status || "") ? (
+                                <span className="font-bold text-terracotta-700 bg-terracotta-100 px-1.5 py-0.2 rounded">
+                                  Overdue
+                                </span>
+                              ) : (
+                                <span className="text-stone-600">
+                                  {formatDate(lead.followUpDate)}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-stone-400 italic">
+                              No follow-up set
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+
+                      {/* Dealt By Column */}
+                      <TableCell className="px-4 py-3.5">
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-botanical-100 text-botanical-800 text-[10px] font-bold shrink-0">
+                            {lead.assignedTo?.name
+                              ? lead.assignedTo.name.charAt(0).toUpperCase()
+                              : lead.lastContactedBy?.name
+                              ? lead.lastContactedBy.name
+                                  .charAt(0)
+                                  .toUpperCase()
+                              : "?"}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold text-stone-800 truncate max-w-[100px]">
+                              {lead.assignedTo?.name ||
+                                lead.lastContactedBy?.name ||
+                                "Unassigned"}
+                            </p>
+                            {lead.callCount && lead.callCount > 0 ? (
+                              <p className="text-[10px] text-stone-400">
+                                {lead.callCount}{" "}
+                                {lead.callCount === 1 ? "call" : "calls"}
+                              </p>
+                            ) : null}
+                          </div>
+                        </div>
+                      </TableCell>
+
                       {/* Website / Opportunity Status */}
                       <TableCell className="px-4 py-3.5">
                         {lead.website ? (
@@ -780,7 +1232,7 @@ export default function LeadsDashboard({
                             target="_blank"
                             rel="noreferrer"
                             onClick={(e) => e.stopPropagation()}
-                            className="inline-flex items-center gap-1.5 text-xs text-botanical-800 hover:text-botanical-600 hover:underline max-w-[160px] truncate"
+                            className="inline-flex items-center gap-1.5 text-xs text-botanical-800 hover:text-botanical-600 hover:underline max-w-[130px] truncate"
                             title={lead.website}
                           >
                             <Globe className="h-3.5 w-3.5 text-sage-600 shrink-0" />
@@ -794,7 +1246,7 @@ export default function LeadsDashboard({
                           </a>
                         ) : (
                           <div className="flex flex-col items-start gap-0.5">
-                            <span className="inline-flex items-center gap-1 rounded-full bg-terracotta-100/90 border border-terracotta-300/80 px-2.5 py-0.5 text-[10px] font-semibold text-terracotta-800 shadow-2xs whitespace-nowrap">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-terracotta-100/90 border border-terracotta-300/80 px-2 py-0.5 text-[10px] font-semibold text-terracotta-800 shadow-2xs whitespace-nowrap">
                               <Target className="h-2.5 w-2.5 text-terracotta-600 shrink-0" />
                               Potential Client
                             </span>
@@ -808,13 +1260,6 @@ export default function LeadsDashboard({
                       {/* Source Badge */}
                       <TableCell className="px-4 py-3.5">
                         {getSourceBadge(lead.source)}
-                      </TableCell>
-
-                      {/* Search Query */}
-                      <TableCell className="px-4 py-3.5">
-                        <span className="inline-block max-w-[200px] truncate text-xs text-stone-600 rounded-md bg-oatmeal-200/60 px-2 py-1">
-                          {lead.searchQuery}
-                        </span>
                       </TableCell>
 
                       {/* Social Links */}
@@ -930,6 +1375,10 @@ export default function LeadsDashboard({
         isOpen={isSheetOpen}
         onClose={() => setIsSheetOpen(false)}
         onSaveRemark={handleSaveRemark}
+        onLeadUpdated={(updated) => {
+          setSelectedLead(updated);
+          refetchLeads();
+        }}
       />
 
       {/* Add Single Lead Manually Modal */}

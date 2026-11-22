@@ -33,6 +33,8 @@ import {
   AlertCircle,
   Loader2,
   FolderKanban,
+  Compass,
+  DollarSign,
 } from "lucide-react";
 import {
   FacebookIcon,
@@ -45,10 +47,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useSession } from "@/lib/auth-client";
 
 const leadFormSchema = z.object({
   name: z.string().trim().min(1, { message: "Business / Lead Name is required" }),
   source: z.string().min(1, { message: "Lead Source is required" }),
+  status: z.string(),
+  priority: z.string(),
+  dealValue: z.string().optional(),
   groupId: z.string().optional(),
   searchQuery: z.string().optional(),
   phone: z.string().optional(),
@@ -85,6 +91,7 @@ export function LeadFormModal({
   searchGroups = [],
   onSuccess,
 }: LeadFormModalProps) {
+  const { data: session } = useSession();
   const queryClient = useQueryClient();
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -110,6 +117,9 @@ export function LeadFormModal({
     defaultValues: {
       name: "",
       source: "Manual",
+      status: "uncontacted",
+      priority: "medium",
+      dealValue: "",
       groupId: defaultGroupId,
       searchQuery: defaultQuery,
       phone: "",
@@ -127,6 +137,8 @@ export function LeadFormModal({
   const currentGroupId = watch("groupId");
   const currentSearchQuery = watch("searchQuery");
   const currentSource = watch("source") || "Manual";
+  const currentStatus = watch("status") || "uncontacted";
+  const currentPriority = watch("priority") || "medium";
   const currentWebsite = watch("website");
 
   useEffect(() => {
@@ -134,6 +146,9 @@ export function LeadFormModal({
       reset({
         name: "",
         source: "Manual",
+        status: "uncontacted",
+        priority: "medium",
+        dealValue: "",
         groupId: targetGroup?.groupId || searchGroups[0]?.groupId || "",
         searchQuery: targetGroup?.query || searchGroups[0]?.query || "",
         phone: "",
@@ -173,6 +188,23 @@ export function LeadFormModal({
         searchQuery: selectedSearchQuery,
         source: values.source || "Manual",
         name: values.name.trim(),
+        status: values.status || "uncontacted",
+        priority: values.priority || "medium",
+        dealValue: values.dealValue && !isNaN(parseFloat(values.dealValue)) ? parseFloat(values.dealValue) : 0,
+        assignedTo: session?.user
+          ? {
+              userId: session.user.id,
+              name: session.user.name,
+              email: session.user.email,
+            }
+          : undefined,
+        lastContactedBy: session?.user
+          ? {
+              userId: session.user.id,
+              name: session.user.name,
+              email: session.user.email,
+            }
+          : undefined,
         phone: values.phone?.trim() || undefined,
         email: values.email?.trim() || undefined,
         website: values.website?.trim() || undefined,
@@ -333,7 +365,73 @@ export function LeadFormModal({
             </div>
           </div>
 
-          {/* SECTION 2: DIRECT CONTACT */}
+          {/* SECTION 2: PIPELINE & QUALIFICATION */}
+          <div className="space-y-3 pt-3 border-t border-stone-200">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-botanical-800">
+              <Compass className="h-3.5 w-3.5 text-botanical-600" />
+              <span>Pipeline & Initial Qualification</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-stone-700">Initial Status</Label>
+                <Select
+                  value={currentStatus}
+                  onValueChange={(val) =>
+                    setValue("status", val ?? "uncontacted", { shouldValidate: true })
+                  }
+                >
+                  <SelectTrigger className="w-full h-9.5 text-xs bg-paper border-stone-300">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="uncontacted">Uncontacted</SelectItem>
+                    <SelectItem value="called">Called</SelectItem>
+                    <SelectItem value="call_later">Call Later</SelectItem>
+                    <SelectItem value="interested">Interested</SelectItem>
+                    <SelectItem value="not_interested">Not Interested</SelectItem>
+                    <SelectItem value="converted">Converted</SelectItem>
+                    <SelectItem value="invalid">Invalid</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-stone-700">Priority</Label>
+                <Select
+                  value={currentPriority}
+                  onValueChange={(val) =>
+                    setValue("priority", val ?? "medium", { shouldValidate: true })
+                  }
+                >
+                  <SelectTrigger className="w-full h-9.5 text-xs bg-paper border-stone-300">
+                    <SelectValue placeholder="Priority" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low Priority</SelectItem>
+                    <SelectItem value="medium">Medium Priority</SelectItem>
+                    <SelectItem value="high">High Priority</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-stone-700 flex items-center gap-1">
+                  <DollarSign className="h-3 w-3 text-stone-400" /> Deal Value ($)
+                </Label>
+                <Input
+                  type="number"
+                  step="any"
+                  min="0"
+                  placeholder="0"
+                  {...register("dealValue")}
+                  className="bg-paper border-stone-300 text-xs h-9.5"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* SECTION 3: DIRECT CONTACT */}
           <div className="space-y-3 pt-3 border-t border-stone-200">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-botanical-800">
               <Phone className="h-3.5 w-3.5 text-botanical-600" />
