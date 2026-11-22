@@ -419,13 +419,15 @@ export default function RegisterPage() {
                     />
                     <label
                       htmlFor="terms"
-                      className="text-xs text-stone-600 cursor-pointer font-normal leading-relaxed select-none"
+                      className="block flex-1 text-xs text-stone-600 cursor-pointer font-normal leading-relaxed select-none"
                     >
-                      I agree to the{" "}
-                      <span className="text-botanical-800 font-medium underline underline-offset-2">
-                        Terms of Service
-                      </span>{" "}
-                      and acknowledge administrator approval flow.
+                      <span>
+                        I agree to the{" "}
+                        <span className="text-botanical-800 font-medium underline underline-offset-2">
+                          Terms of Service
+                        </span>{" "}
+                        and acknowledge administrator approval flow.
+                      </span>
                     </label>
                   </div>
                   {errors.terms && (

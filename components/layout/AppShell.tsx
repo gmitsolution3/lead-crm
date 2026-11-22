@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { SidebarProvider } from "./SidebarContext";
 import type { User } from "@/types";
 
 interface AppShellProps {
@@ -11,7 +12,7 @@ interface AppShellProps {
   user?: User | null;
 }
 
-export function AppShell({ children, user }: AppShellProps) {
+function AppShellContent({ children, user }: AppShellProps) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   return (
@@ -34,12 +35,20 @@ export function AppShell({ children, user }: AppShellProps) {
       </Sheet>
 
       {/* Main App Container */}
-      <div className="flex flex-1 flex-col min-w-0">
+      <div className="flex flex-1 flex-col min-w-0 transition-all duration-200">
         <Header onOpenMobileSidebar={() => setMobileSidebarOpen(true)} />
         <main className="flex-1 px-4 py-6 sm:px-6 md:px-8 md:py-8">
           <div className="mx-auto max-w-7xl">{children}</div>
         </main>
       </div>
     </div>
+  );
+}
+
+export function AppShell(props: AppShellProps) {
+  return (
+    <SidebarProvider>
+      <AppShellContent {...props} />
+    </SidebarProvider>
   );
 }

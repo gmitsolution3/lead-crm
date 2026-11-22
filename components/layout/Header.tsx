@@ -7,8 +7,11 @@ import {
   Menu,
   LogOut,
   Plus,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useSidebar } from "./SidebarContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,6 +41,10 @@ export function Header({
 }: HeaderProps) {
   const router = useRouter();
   const { data: session } = useSession();
+  const { isCollapsed, toggleSidebar } = useSidebar();
+  const userRole = ((session?.user as any)?.role || "user").toLowerCase();
+  const canManageLeads = userRole === "admin" || userRole === "moderator";
+
   const [isAddLeadOpen, setIsAddLeadOpen] = useState(false);
   const { data: searchGroupsResponse } = useFetch<any>("/search-groups");
   const searchGroups: SearchGroup[] = Array.isArray(searchGroupsResponse?.data)
@@ -58,8 +65,9 @@ export function Header({
 
   return (
     <header className="sticky top-0 z-30 flex h-18 w-full items-center justify-between border-b border-stone-200/90 bg-paper/95 px-4 backdrop-blur-md md:px-8">
-      {/* Left section: mobile hamburger + active group filter */}
-      <div className="flex flex-1 items-center gap-3 md:gap-6">
+      {/* Left section: sidebar toggle, mobile hamburger + active group filter */}
+      <div className="flex flex-1 items-center gap-2 md:gap-4">
+        {/* Mobile Hamburger */}
         <Button
           variant="ghost"
           size="icon"
@@ -67,6 +75,21 @@ export function Header({
           onClick={onOpenMobileSidebar}
         >
           <Menu className="h-5 w-5" />
+        </Button>
+
+        {/* Desktop Sidebar Toggle Button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleSidebar}
+          title={isCollapsed ? "Expand sidebar (Ctrl+B)" : "Collapse sidebar (Ctrl+B)"}
+          className="hidden md:inline-flex text-stone-600 hover:text-botanical-900 hover:bg-oatmeal-200/80 rounded-xl h-9 w-9 cursor-pointer transition-colors"
+        >
+          {isCollapsed ? (
+            <PanelLeftOpen className="h-4.5 w-4.5 text-stone-600" />
+          ) : (
+            <PanelLeftClose className="h-4.5 w-4.5 text-stone-600" />
+          )}
         </Button>
 
         {/* Active Filter Pill if a search group is filtered */}
@@ -87,26 +110,30 @@ export function Header({
 
       {/* Right section: actions, sync status, notifications, profile */}
       <div className="flex items-center gap-2 sm:gap-3">
-        {/* Add Lead Button */}
-        <Button
-          size="sm"
-          onClick={() => setIsAddLeadOpen(true)}
-          className="inline-flex items-center gap-1.5 h-9 text-xs bg-botanical-800 hover:bg-botanical-900 text-white cursor-pointer rounded-xl shadow-xs font-semibold"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          <span>Add Lead</span>
-        </Button>
+        {canManageLeads && (
+          <>
+            {/* Add Lead Button */}
+            <Button
+              size="sm"
+              onClick={() => setIsAddLeadOpen(true)}
+              className="inline-flex items-center gap-1.5 h-9 text-xs bg-botanical-800 hover:bg-botanical-900 text-white cursor-pointer rounded-xl shadow-xs font-semibold"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Add Lead</span>
+            </Button>
 
-        {/* Sync Button */}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onRefreshData}
-          className="hidden sm:inline-flex items-center gap-1.5 h-9 text-xs border-stone-200 text-stone-700 hover:text-botanical-900 cursor-pointer"
-        >
-          <RefreshCw className="h-3.5 w-3.5 text-sage-600" />
-          <span>Sync Extension</span>
-        </Button>
+            {/* Sync Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onRefreshData}
+              className="hidden sm:inline-flex items-center gap-1.5 h-9 text-xs border-stone-200 text-stone-700 hover:text-botanical-900 cursor-pointer"
+            >
+              <RefreshCw className="h-3.5 w-3.5 text-sage-600" />
+              <span>Sync Extension</span>
+            </Button>
+          </>
+        )}
 
         {/* Quick Notification Dropdown */}
         <DropdownMenu>
@@ -169,11 +196,11 @@ export function Header({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* User Role & Quick Sign Out */}
-        {session?.user && (
+        {/* User Role & Quick Sign Out - Only shown for lead managers; unapproved users keep notification bell only */}
+        {canManageLeads && session?.user && (
           <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-stone-200">
             <Badge
-              variant={((session.user as any)?.role || "user").toLowerCase() === "admin" ? "terracotta" : "sage"}
+              variant={userRole === "admin" ? "terracotta" : "sage"}
               className="text-[10px] uppercase font-bold"
             >
               {(session.user as any)?.role || "USER"}
@@ -192,12 +219,14 @@ export function Header({
         )}
 
         {/* Live Status indicator */}
-        <div className="hidden xl:flex items-center gap-2 rounded-xl bg-oatmeal-200/60 px-3 py-1.5 border border-stone-200/80">
-          <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-xs font-medium text-stone-700">
-            Engine Ready
-          </span>
-        </div>
+        {canManageLeads && (
+          <div className="hidden xl:flex items-center gap-2 rounded-xl bg-oatmeal-200/60 px-3 py-1.5 border border-stone-200/80">
+            <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-xs font-medium text-stone-700">
+              Engine Ready
+            </span>
+          </div>
+        )}
       </div>
 
       <LeadFormModal
