@@ -26,7 +26,7 @@ export interface GuardOptions {
  * Redirects unauthorized users automatically before rendering server components.
  */
 export async function requireAuth(options: GuardOptions = {}) {
-  const { allowedRoles, requiredRole, redirectTo = "/login" } = options;
+  const { allowedRoles = ["admin", "moderator"], requiredRole, redirectTo = "/login" } = options;
 
   const headerList = await headers();
   const session = await auth.api.getSession({

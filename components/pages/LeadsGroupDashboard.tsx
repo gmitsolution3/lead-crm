@@ -569,11 +569,8 @@ export default function LeadsGroupDashboard({
         title="Delete Search Group"
         description="Are you sure you want to delete this search group? This will permanently remove the group and all captured leads contained within it."
         itemName={groupToDelete?.query}
-        warningNote={
-          groupToDelete
-            ? `All ${groupToDelete.leadCount ?? (Array.isArray(groupToDelete.leads) ? groupToDelete.leads.length : 0)} leads in this group will be deleted.`
-            : undefined
-        }
+        warningNote="Deleting this search group will permanently delete all leads collected under it."
+        requireConfirmationWord="CONFIRM"
         isDeleting={isDeletingGroup}
       />
     </div>

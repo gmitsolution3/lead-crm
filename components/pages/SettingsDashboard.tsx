@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,7 +57,7 @@ export default function SettingsDashboard({ user: initialUser }: SettingsDashboa
   const [activeTab, setActiveTab] = useState<string>("settings");
   const [activeSection, setActiveSection] = useState<
     "profile" | "workspace" | "security"
-  >("profile");
+  >("workspace");
 
   // User Profile State
   const [profile, setProfile] = useState<UserProfileData | null>(null);
@@ -373,6 +374,36 @@ export default function SettingsDashboard({ user: initialUser }: SettingsDashboa
     }
   };
 
+  const userRole = (initialUser?.role || (session?.user as any)?.role || profile?.role || "user").toLowerCase();
+
+  if (!profileLoading && userRole !== "admin") {
+    return (
+      <div className="py-20 text-center max-w-md mx-auto space-y-4">
+        <div className="h-12 w-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center mx-auto border border-amber-200">
+          <Shield className="h-6 w-6" />
+        </div>
+        <h2 className="font-serif text-2xl font-bold text-botanical-900">
+          Administrator Access Required
+        </h2>
+        <p className="text-xs text-stone-600 leading-relaxed">
+          Settings are restricted to system administrators. To manage your personal profile information, please visit your profile page.
+        </p>
+        <div className="pt-2 flex justify-center gap-3">
+          <Link href="/profile">
+            <Button size="sm" className="rounded-xl text-xs bg-botanical-800 hover:bg-botanical-900 text-paper">
+              Go to My Profile
+            </Button>
+          </Link>
+          <Link href="/">
+            <Button size="sm" variant="outline" className="rounded-xl text-xs border-stone-200">
+              Return to Overview
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 max-w-6xl">
         {/* Header */}
@@ -388,20 +419,33 @@ export default function SettingsDashboard({ user: initialUser }: SettingsDashboa
               </Badge>
             </div>
             <h1 className="text-3xl font-bold tracking-tight text-botanical-900">
-              Account & Workspace Settings
+              Workspace & System Settings
             </h1>
             <p className="mt-1 text-sm text-stone-600">
-              Manage your personal administrator identity, Cloudinary profile avatar, credentials, and crawler preferences.
+              Configure extension crawler credentials, API keys, lead extraction rules, and CRM security policies.
             </p>
           </div>
+        </div>
+
+        {/* Profile Separation Banner */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3.5 rounded-2xl bg-sage-50/80 border border-sage-200 text-xs text-botanical-800">
+          <div className="flex items-center gap-2">
+            <UserIcon className="h-4 w-4 text-sage-600 shrink-0" />
+            <span>Looking to update your personal details, avatar photo, or password?</span>
+          </div>
+          <Link
+            href="/profile"
+            className="font-semibold text-botanical-900 underline hover:text-botanical-700 shrink-0"
+          >
+            Go to My Profile &rarr;
+          </Link>
         </div>
 
         {/* Section Navigation Tabs */}
         <div className="flex items-center gap-2 border-b border-stone-200/90 pb-3 overflow-x-auto">
           {[
-            { id: "profile", label: "My Profile & Cloudinary Avatar", icon: UserIcon },
             { id: "workspace", label: "Extension & Crawler Keys", icon: Key },
-            { id: "security", label: "Security Policies & Roles", icon: Shield },
+            { id: "security", label: "Security Policies & System Roles", icon: Shield },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeSection === tab.id;

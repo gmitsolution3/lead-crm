@@ -1,9 +1,10 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { AlertTriangle, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { cn } from "cn";
 
 interface DeleteConfirmModalProps {
@@ -16,6 +17,7 @@ interface DeleteConfirmModalProps {
   warningNote?: string;
   confirmText?: string;
   isDeleting?: boolean;
+  requireConfirmationWord?: string;
 }
 
 export function DeleteConfirmModal({
@@ -28,9 +30,29 @@ export function DeleteConfirmModal({
   warningNote,
   confirmText = "Delete Permanently",
   isDeleting = false,
+  requireConfirmationWord,
 }: DeleteConfirmModalProps) {
+  const [confirmationInput, setConfirmationInput] = useState("");
+
+  useEffect(() => {
+    if (isOpen) {
+      setConfirmationInput("");
+    }
+  }, [isOpen]);
+
+  const handleClose = () => {
+    if (!isDeleting) {
+      setConfirmationInput("");
+      onClose();
+    }
+  };
+
+  const isConfirmationMatched =
+    !requireConfirmationWord || confirmationInput === requireConfirmationWord;
+  const isConfirmDisabled = isDeleting || !isConfirmationMatched;
+
   return (
-    <DialogPrimitive.Root open={isOpen} onOpenChange={(open) => !open && !isDeleting && onClose()}>
+    <DialogPrimitive.Root open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Backdrop
           className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0"
@@ -67,6 +89,38 @@ export function DeleteConfirmModal({
                   <span>{warningNote}</span>
                 </div>
               )}
+
+              {requireConfirmationWord && (
+                <div className="mt-3.5 space-y-2">
+                  <label
+                    htmlFor="delete-confirmation-input"
+                    className="block text-xs text-stone-600 leading-normal"
+                  >
+                    To confirm, please type{" "}
+                    <span className="font-bold text-rose-700 font-mono bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200 select-all">
+                      {requireConfirmationWord}
+                    </span>{" "}
+                    below:
+                  </label>
+                  <Input
+                    id="delete-confirmation-input"
+                    type="text"
+                    value={confirmationInput}
+                    onChange={(e) => setConfirmationInput(e.target.value)}
+                    disabled={isDeleting}
+                    placeholder={`Type ${requireConfirmationWord} to confirm`}
+                    autoComplete="off"
+                    spellCheck={false}
+                    className="h-9 text-xs bg-oatmeal-100/60 border-stone-300 focus-visible:border-botanical-700 focus-visible:ring-botanical-700/20 text-botanical-900"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !isConfirmDisabled) {
+                        e.preventDefault();
+                        onConfirm();
+                      }
+                    }}
+                  />
+                </div>
+              )}
             </div>
           </div>
 
@@ -76,7 +130,7 @@ export function DeleteConfirmModal({
               variant="outline"
               size="sm"
               disabled={isDeleting}
-              onClick={onClose}
+              onClick={handleClose}
               className="text-xs h-9 px-4 rounded-xl border-stone-200 text-stone-600 hover:bg-stone-100 cursor-pointer"
             >
               Cancel
@@ -84,7 +138,7 @@ export function DeleteConfirmModal({
             <Button
               type="button"
               size="sm"
-              disabled={isDeleting}
+              disabled={isConfirmDisabled}
               onClick={onConfirm}
               className="text-xs h-9 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold cursor-pointer gap-1.5 shadow-sm"
             >

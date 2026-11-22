@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { signOut } from "@/lib/auth-client";
-import { Settings, LogOut } from "lucide-react";
+import { Settings, LogOut, User as UserIcon } from "lucide-react";
 import type { User } from "@/types";
 
 interface SidebarProfileProps {
@@ -58,6 +59,15 @@ export function SidebarProfile({ user, role = "user" }: SidebarProfileProps) {
             </p>
             <p className="text-[11px] text-stone-500 truncate">{userEmail}</p>
           </div>
+
+          <Link
+            href="/profile"
+            onClick={() => setProfileMenuOpen(false)}
+            className="w-full flex items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-medium text-stone-700 hover:bg-stone-100 transition-colors cursor-pointer mb-1"
+          >
+            <UserIcon className="h-4 w-4 text-stone-500" />
+            <span>My Profile</span>
+          </Link>
 
           <button
             type="button"

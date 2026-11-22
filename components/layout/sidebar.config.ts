@@ -4,6 +4,7 @@ import {
   Users,
   UserCog,
   Settings,
+  User as UserIcon,
   LucideIcon,
 } from "lucide-react";
 
@@ -58,13 +59,19 @@ export const MASTER_NAVIGATION: NavSection[] = [
     ],
   },
   {
-    title: "Preferences",
+    title: "Account",
     items: [
+      {
+        title: "My Profile",
+        href: "/profile",
+        icon: UserIcon,
+        roles: ["admin", "moderator", "user"],
+      },
       {
         title: "Settings",
         href: "/settings",
         icon: Settings,
-        roles: ["admin", "moderator", "user"],
+        roles: ["admin"],
       },
     ],
   },

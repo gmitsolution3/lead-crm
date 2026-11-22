@@ -6,6 +6,7 @@ import { LeadMetricCards } from "@/components/features/leads/LeadMetricCards";
 import { RecentActivityFeed } from "@/components/features/leads/RecentActivityFeed";
 import { LeadDetailSheet } from "@/components/features/leads/LeadDetailSheet";
 import { useFetch, usePatch } from "@/hooks";
+import { useSession } from "@/lib/auth-client";
 import { Lead, SearchGroup } from "@/types";
 import type { User, ActivityEvent } from "@/types";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -30,6 +31,10 @@ import {
   Mail,
   Phone,
   ExternalLink,
+  ShieldCheck,
+  UserCheck,
+  Filter,
+  Users,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -39,6 +44,11 @@ interface OverviewDashboardProps {
 
 export default function OverviewDashboard({ user }: OverviewDashboardProps) {
   const router = useRouter();
+  const { data: session } = useSession();
+
+  const effectiveUser = user || session?.user;
+  const userRole = ((effectiveUser as any)?.role || "user").toLowerCase();
+  const isModerator = userRole === "moderator";
 
   // Colocated SWR fetch for search groups
   const { data: searchGroupsData } = useFetch<any>("/search-groups");
@@ -119,201 +129,340 @@ export default function OverviewDashboard({ user }: OverviewDashboardProps) {
       </AnimatePresence>
 
       {/* Top Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 border-b border-stone-200/80 pb-6">
-        <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-sage-300 bg-sage-50/80 px-3 py-1 text-xs font-semibold text-botanical-800 mb-2">
-            <Sprout className="h-3.5 w-3.5 text-sage-600" />
-            <span>GM Lead Generator &bull; Organic Workspace</span>
+      {isModerator ? (
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 border-b border-stone-200/80 pb-6">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="inline-flex items-center gap-2 rounded-full border border-sage-300 bg-sage-50/80 px-3 py-1 text-xs font-semibold text-botanical-800">
+                <Sprout className="h-3.5 w-3.5 text-sage-600" />
+                <span>Moderator Workspace</span>
+              </div>
+              <Badge
+                variant="sage"
+                className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 bg-sage-200/90 text-botanical-900 border-sage-300"
+              >
+                Moderator
+              </Badge>
+            </div>
+            <h1 className="font-serif text-3xl font-bold tracking-tight text-botanical-900 md:text-4xl">
+              Moderator Operations Center
+            </h1>
+            <p className="mt-1 text-sm text-stone-600 max-w-2xl">
+              Audit extracted business records, verify contact information, and review scraped lead streams across active search clusters.
+            </p>
           </div>
-          <h1 className="font-serif text-3xl font-bold tracking-tight text-botanical-900 md:text-4xl">
-            Live Workspace Overview
-          </h1>
-          <p className="mt-1 text-sm text-stone-600 max-w-2xl">
-            Real-time feed of multi-platform leads extracted from Google Maps,
-            Facebook, and LinkedIn searches with live social contact
-            enrichment.
-          </p>
-        </div>
 
-        <div className="flex items-center gap-3">
-          <Button
-            variant="default"
-            size="default"
-            onClick={() => router.push("/leads")}
-            className="cursor-pointer gap-2"
-          >
-            <span>Explore All Leads</span>
-            <ArrowRight className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="default"
+              size="default"
+              onClick={() => router.push("/leads")}
+              className="cursor-pointer gap-2 bg-botanical-800 hover:bg-botanical-900 text-paper rounded-xl shadow-xs"
+            >
+              <span>Review Lead Directory</span>
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 border-b border-stone-200/80 pb-6">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="inline-flex items-center gap-2 rounded-full border border-sage-300 bg-sage-50/80 px-3 py-1 text-xs font-semibold text-botanical-800">
+                <Sprout className="h-3.5 w-3.5 text-sage-600" />
+                <span>GM Lead Generator &bull; Organic Workspace</span>
+              </div>
+              <Badge
+                variant="terracotta"
+                className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5"
+              >
+                Admin
+              </Badge>
+            </div>
+            <h1 className="font-serif text-3xl font-bold tracking-tight text-botanical-900 md:text-4xl">
+              Live Workspace Overview
+            </h1>
+            <p className="mt-1 text-sm text-stone-600 max-w-2xl">
+              Real-time feed of multi-platform leads extracted from Google Maps,
+              Facebook, and LinkedIn searches with live social contact
+              enrichment.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Button
+              variant="default"
+              size="default"
+              onClick={() => router.push("/leads")}
+              className="cursor-pointer gap-2"
+            >
+              <span>Explore All Leads</span>
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Metric Cards Row */}
-      <LeadMetricCards
-        totalLeads={leads.length}
-        totalGroups={groups.length}
-        conversionRate={conversionRate}
-        potentialClients={prospectsWithoutWebsite}
-      />
+      {isModerator ? (
+        <>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="rounded-2xl border border-stone-200/90 bg-[#FCFBF8] p-5 shadow-sm">
+              <div className="flex items-center justify-between text-xs text-stone-500 mb-1.5">
+                <span className="font-semibold uppercase tracking-wider text-[10px]">
+                  Assigned Pool
+                </span>
+                <Users className="h-4 w-4 text-botanical-700" />
+              </div>
+              <p className="text-2xl font-bold text-botanical-900">{leads.length}</p>
+              <p className="text-[11px] text-stone-400 mt-0.5">Total monitored leads</p>
+            </Card>
+
+            <Card className="rounded-2xl border border-stone-200/90 bg-[#FCFBF8] p-5 shadow-sm">
+              <div className="flex items-center justify-between text-xs text-stone-500 mb-1.5">
+                <span className="font-semibold uppercase tracking-wider text-[10px]">
+                  Verified Contacts
+                </span>
+                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              </div>
+              <p className="text-2xl font-bold text-emerald-800">{verifiedCount}</p>
+              <p className="text-[11px] text-stone-400 mt-0.5">Email or phone active</p>
+            </Card>
+
+            <Card className="rounded-2xl border border-stone-200/90 bg-[#FCFBF8] p-5 shadow-sm">
+              <div className="flex items-center justify-between text-xs text-stone-500 mb-1.5">
+                <span className="font-semibold uppercase tracking-wider text-[10px]">
+                  Prospects Without Site
+                </span>
+                <Target className="h-4 w-4 text-terracotta-600" />
+              </div>
+              <p className="text-2xl font-bold text-terracotta-700">{prospectsWithoutWebsite}</p>
+              <p className="text-[11px] text-stone-400 mt-0.5">Prime design leads</p>
+            </Card>
+
+            <Card className="rounded-2xl border border-stone-200/90 bg-[#FCFBF8] p-5 shadow-sm">
+              <div className="flex items-center justify-between text-xs text-stone-500 mb-1.5">
+                <span className="font-semibold uppercase tracking-wider text-[10px]">
+                  Active Clusters
+                </span>
+                <Globe className="h-4 w-4 text-sage-600" />
+              </div>
+              <p className="text-2xl font-bold text-botanical-900">{groups.length}</p>
+              <p className="text-[11px] text-stone-400 mt-0.5">Query groups</p>
+            </Card>
+          </div>
+
+          {/* Placeholders ready for future features */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div className="rounded-2xl border border-stone-200/90 bg-[#FCFBF8] p-5 shadow-sm space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-botanical-800 font-semibold text-sm">
+                  <ShieldCheck className="h-4 w-4 text-botanical-700" />
+                  <span>Lead Verification Queue</span>
+                </div>
+                <Badge variant="sage" className="text-[9px] uppercase font-bold">Queue Ready</Badge>
+              </div>
+              <p className="text-xs text-stone-500 leading-relaxed">
+                Audit extracted business data, ensure valid phone numbers, and verify active email channels for outreach.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-stone-200/90 bg-[#FCFBF8] p-5 shadow-sm space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-botanical-800 font-semibold text-sm">
+                  <UserCheck className="h-4 w-4 text-sage-600" />
+                  <span>Outreach Pipeline</span>
+                </div>
+                <Badge variant="sage" className="text-[9px] uppercase font-bold">Planned</Badge>
+              </div>
+              <p className="text-xs text-stone-500 leading-relaxed">
+                Assign vetted leads to campaign managers and track call, WhatsApp, and email contact statuses.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-stone-200/90 bg-[#FCFBF8] p-5 shadow-sm space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-botanical-800 font-semibold text-sm">
+                  <Filter className="h-4 w-4 text-terracotta-600" />
+                  <span>Data Sanitization</span>
+                </div>
+                <Badge variant="sage" className="text-[9px] uppercase font-bold">Automated</Badge>
+              </div>
+              <p className="text-xs text-stone-500 leading-relaxed">
+                Flag dead phone numbers, duplicate leads across clusters, and low-quality scraper noise.
+              </p>
+            </div>
+          </div>
+        </>
+      ) : (
+        <LeadMetricCards
+          totalLeads={leads.length}
+          totalGroups={groups.length}
+          conversionRate={conversionRate}
+          potentialClients={prospectsWithoutWebsite}
+        />
+      )}
 
       {/* Two Column Layout: Recent Activity + Distribution Insights */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left 2 Cols: Activity Feed */}
-        <div className="lg:col-span-2">
+      <div className={`grid grid-cols-1 ${isModerator ? "lg:grid-cols-1" : "lg:grid-cols-3"} gap-8`}>
+        {/* Left 2 Cols (or full width for Moderator): Activity Feed */}
+        <div className={isModerator ? "" : "lg:col-span-2"}>
           <RecentActivityFeed
             activities={activities}
             onSelectLeadByName={handleSelectLeadByName}
           />
         </div>
 
-        {/* Right 1 Col: Platform Health & Lead Insights */}
-        <div className="space-y-6">
-          {/* Engine Status Card */}
-          <Card className="border border-stone-200/90 shadow-paper">
-            <CardHeader className="pb-3 border-b border-stone-100">
-              <CardTitle className="font-serif text-base text-botanical-900 flex items-center gap-2">
-                <PieChart className="h-4 w-4 text-terracotta-600" />
-                <span>Extraction Breakdown</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-4 space-y-4">
-              <div>
-                <div className="flex justify-between text-xs font-medium text-stone-600 mb-1.5">
-                  <span>Google Maps Extraction</span>
-                  <span className="font-semibold text-botanical-800">
-                    {
-                      leads.filter(
-                        (l) =>
-                          l.source.toLowerCase().includes("map") ||
-                          l.source.toLowerCase().includes("google")
-                      ).length
-                    }{" "}
-                    leads
-                  </span>
-                </div>
-                <div className="h-2 w-full rounded-full bg-oatmeal-200 overflow-hidden">
-                  <div
-                    className="h-full bg-sage-500 rounded-full"
-                    style={{
-                      width: `${Math.min(
-                        100,
-                        (leads.filter(
+        {/* Right 1 Col: Platform Health & Lead Insights (Admin Only) */}
+        {!isModerator && (
+          <div className="space-y-6">
+            {/* Engine Status Card */}
+            <Card className="border border-stone-200/90 shadow-paper">
+              <CardHeader className="pb-3 border-b border-stone-100">
+                <CardTitle className="font-serif text-base text-botanical-900 flex items-center gap-2">
+                  <PieChart className="h-4 w-4 text-terracotta-600" />
+                  <span>Extraction Breakdown</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4 space-y-4">
+                <div>
+                  <div className="flex justify-between text-xs font-medium text-stone-600 mb-1.5">
+                    <span>Google Maps Extraction</span>
+                    <span className="font-semibold text-botanical-800">
+                      {
+                        leads.filter(
                           (l) =>
                             l.source.toLowerCase().includes("map") ||
                             l.source.toLowerCase().includes("google")
-                        ).length /
-                          (leads.length || 1)) *
-                          100
-                      )}%`,
-                    }}
-                  />
+                        ).length
+                      }{" "}
+                      leads
+                    </span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-oatmeal-200 overflow-hidden">
+                    <div
+                      className="h-full bg-sage-500 rounded-full"
+                      style={{
+                        width: `${Math.min(
+                          100,
+                          (leads.filter(
+                            (l) =>
+                              l.source.toLowerCase().includes("map") ||
+                              l.source.toLowerCase().includes("google")
+                          ).length /
+                            (leads.length || 1)) *
+                            100
+                        )}%`,
+                      }}
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <div className="flex justify-between text-xs font-medium text-stone-600 mb-1.5">
-                  <span>Facebook Places &amp; Groups</span>
-                  <span className="font-semibold text-botanical-800">
-                    {
-                      leads.filter(
-                        (l) =>
-                          l.source.toLowerCase().includes("face") ||
-                          l.source.toLowerCase().includes("insta")
-                      ).length
-                    }{" "}
-                    leads
-                  </span>
-                </div>
-                <div className="h-2 w-full rounded-full bg-oatmeal-200 overflow-hidden">
-                  <div
-                    className="h-full bg-terracotta-500 rounded-full"
-                    style={{
-                      width: `${Math.min(
-                        100,
-                        (leads.filter(
+                <div>
+                  <div className="flex justify-between text-xs font-medium text-stone-600 mb-1.5">
+                    <span>Facebook Places &amp; Groups</span>
+                    <span className="font-semibold text-botanical-800">
+                      {
+                        leads.filter(
                           (l) =>
                             l.source.toLowerCase().includes("face") ||
                             l.source.toLowerCase().includes("insta")
-                        ).length /
-                          (leads.length || 1)) *
-                          100
-                      )}%`,
-                    }}
-                  />
+                        ).length
+                      }{" "}
+                      leads
+                    </span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-oatmeal-200 overflow-hidden">
+                    <div
+                      className="h-full bg-terracotta-500 rounded-full"
+                      style={{
+                        width: `${Math.min(
+                          100,
+                          (leads.filter(
+                            (l) =>
+                              l.source.toLowerCase().includes("face") ||
+                              l.source.toLowerCase().includes("insta")
+                          ).length /
+                            (leads.length || 1)) *
+                            100
+                        )}%`,
+                      }}
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <div className="flex justify-between text-xs font-medium text-stone-600 mb-1.5">
-                  <span>LinkedIn Directory</span>
+                <div>
+                  <div className="flex justify-between text-xs font-medium text-stone-600 mb-1.5">
+                    <span>LinkedIn Directory</span>
+                    <span className="font-semibold text-botanical-800">
+                      {
+                        leads.filter((l) =>
+                          l.source.toLowerCase().includes("linkedin")
+                        ).length
+                      }{" "}
+                      leads
+                    </span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-oatmeal-200 overflow-hidden">
+                    <div
+                      className="h-full bg-botanical-700 rounded-full"
+                      style={{
+                        width: `${Math.min(
+                          100,
+                          (leads.filter((l) =>
+                            l.source.toLowerCase().includes("linkedin")
+                          ).length /
+                            (leads.length || 1)) *
+                            100
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-dashed border-stone-200 bg-oatmeal-100/50 p-3 mt-4 text-xs text-stone-600 leading-relaxed">
                   <span className="font-semibold text-botanical-800">
-                    {
-                      leads.filter((l) =>
-                        l.source.toLowerCase().includes("linkedin")
-                      ).length
-                    }{" "}
-                    leads
+                    Efficiency Tip:
+                  </span>{" "}
+                  Target companies labeled with{" "}
+                  <span className="font-bold text-terracotta-700">
+                    &ldquo;No Website&rdquo;
+                  </span>{" "}
+                  for highest web design and conversion rates.
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Quick Stats Summary */}
+            <Card className="border border-stone-200/90 shadow-paper bg-gradient-to-br from-paper to-oatmeal-100/40">
+              <CardHeader className="pb-3 border-b border-stone-100">
+                <CardTitle className="font-serif text-base text-botanical-900">
+                  Workspace Health
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4 space-y-3">
+                <div className="flex items-center justify-between text-xs py-1 border-b border-stone-100">
+                  <span className="text-stone-500">Contactability Score</span>
+                  <span className="font-bold text-botanical-800">
+                    {conversionRate}%
                   </span>
                 </div>
-                <div className="h-2 w-full rounded-full bg-oatmeal-200 overflow-hidden">
-                  <div
-                    className="h-full bg-botanical-700 rounded-full"
-                    style={{
-                      width: `${Math.min(
-                        100,
-                        (leads.filter((l) =>
-                          l.source.toLowerCase().includes("linkedin")
-                        ).length /
-                          (leads.length || 1)) *
-                          100
-                      )}%`,
-                    }}
-                  />
+                <div className="flex items-center justify-between text-xs py-1 border-b border-stone-100">
+                  <span className="text-stone-500">Unique Search Clusters</span>
+                  <span className="font-bold text-botanical-800">
+                    {groups.length} groups
+                  </span>
                 </div>
-              </div>
-
-              <div className="rounded-xl border border-dashed border-stone-200 bg-oatmeal-100/50 p-3 mt-4 text-xs text-stone-600 leading-relaxed">
-                <span className="font-semibold text-botanical-800">
-                  Efficiency Tip:
-                </span>{" "}
-                Target companies labeled with{" "}
-                <span className="font-bold text-terracotta-700">
-                  &ldquo;No Website&rdquo;
-                </span>{" "}
-                for highest web design and conversion rates.
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Quick Stats Summary */}
-          <Card className="border border-stone-200/90 shadow-paper bg-gradient-to-br from-paper to-oatmeal-100/40">
-            <CardHeader className="pb-3 border-b border-stone-100">
-              <CardTitle className="font-serif text-base text-botanical-900">
-                Workspace Health
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-4 space-y-3">
-              <div className="flex items-center justify-between text-xs py-1 border-b border-stone-100">
-                <span className="text-stone-500">Contactability Score</span>
-                <span className="font-bold text-botanical-800">
-                  {conversionRate}%
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-xs py-1 border-b border-stone-100">
-                <span className="text-stone-500">Unique Search Clusters</span>
-                <span className="font-bold text-botanical-800">
-                  {groups.length} groups
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-xs py-1">
-                <span className="text-stone-500">Database Engine</span>
-                <span className="font-semibold text-emerald-700">
-                  MongoDB Atlas (Active)
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                <div className="flex items-center justify-between text-xs py-1">
+                  <span className="text-stone-500">Database Engine</span>
+                  <span className="font-semibold text-emerald-700">
+                    MongoDB Atlas (Active)
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
 
       {/* Leads Table Preview (Top 5 Recent) */}

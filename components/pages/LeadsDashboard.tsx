@@ -1,11 +1,14 @@
 "use client";
 
 import { LeadDetailSheet } from "@/components/features/leads/LeadDetailSheet";
-import { LeadPipelineModal } from "@/components/features/leads/LeadPipelineModal";
+import { LeadFormModal } from "@/components/features/leads/LeadFormModal";
 import { LeadNotesModal } from "@/components/features/leads/LeadNotesModal";
+import { LeadPipelineModal } from "@/components/features/leads/LeadPipelineModal";
 import { LeadTableSkeletonRows } from "@/components/features/leads/LeadTableSkeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { DeleteConfirmModal } from "@/components/ui/delete-confirm-modal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,14 +17,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { EmptyState } from "@/components/ui/empty-state";
-import {
-  FacebookIcon,
-  InstagramIcon,
-  LinkedinIcon,
-  WhatsAppIcon,
-} from "@/components/ui/icons";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -37,24 +39,26 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useFetch, usePatch, useDelete } from "@/hooks";
-import { cn, formatDate, formatShortDateTime } from "@/lib/utils";
+import { useDelete, useFetch, usePatch } from "@/hooks";
 import { useSession } from "@/lib/auth-client";
 import { isStatusTransitionAllowed } from "@/lib/lead-pipeline";
-import type { User, LeadStatus, LeadPriority } from "@/types";
+import { cn, formatShortDateTime } from "@/lib/utils";
+import type { LeadPriority, LeadStatus, User } from "@/types";
 import { Lead, SearchGroup } from "@/types";
-import { LeadFormModal } from "@/components/features/leads/LeadFormModal";
-import { DeleteConfirmModal } from "@/components/ui/delete-confirm-modal";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  AlertTriangle,
+  ArrowDown,
   ArrowLeft,
+  ArrowUp,
   ArrowUpDown,
+  Ban,
   Calendar as CalendarIcon,
   CheckCircle2,
+  CircleDot,
   Clock,
   Download,
+  Equal,
   ExternalLink,
   Eye,
   Filter,
@@ -72,10 +76,16 @@ import {
   Search,
   Target,
   Trash2,
+  Trophy,
   UserCheck,
   Users,
+  UserX,
 } from "lucide-react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import {
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 // ==========================================
@@ -140,20 +150,24 @@ export const getPriorityBadge = (priority?: LeadPriority) => {
   switch (priority) {
     case "high":
       return (
-        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
-          🔥 High
+        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 shadow-2xs hover:bg-rose-100 transition-colors">
+          <ArrowUp className="h-2.5 w-2.5 text-rose-600 shrink-0" />
+          <span>High</span>
         </span>
       );
     case "low":
       return (
-        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] font-semibold bg-stone-100 text-stone-600 border border-stone-200">
-          ❄️ Low
+        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-stone-100 text-stone-600 border border-stone-200 shadow-2xs hover:bg-stone-200 transition-colors">
+          <ArrowDown className="h-2.5 w-2.5 text-stone-500 shrink-0" />
+          <span>Low</span>
         </span>
       );
+    case "medium":
     default:
       return (
-        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-          ⚡ Med
+        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 shadow-2xs hover:bg-amber-100 transition-colors">
+          <Equal className="h-2.5 w-2.5 text-amber-600 shrink-0" />
+          <span>Med</span>
         </span>
       );
   }
@@ -222,7 +236,9 @@ export default function LeadsDashboard({
     data: groupRes,
     isLoading: groupLoading,
     refetch: refetchGroup,
-  } = useFetch<any>(`/search-groups/${encodeURIComponent(decodedId)}`);
+  } = useFetch<any>(
+    `/search-groups/${encodeURIComponent(decodedId)}`,
+  );
 
   const group: SearchGroup | null = useMemo(() => {
     return groupRes?.data || groupRes || null;
@@ -234,25 +250,39 @@ export default function LeadsDashboard({
   // 2. Table filters, search, sort, and pagination state initialized from URL query params
   const initialSearch = searchParams?.get("search") || "";
   const initialSource = searchParams?.get("source") || "all";
-  const initialWebsite = (searchParams?.get("websiteFilter") as any) || "all";
+  const initialWebsite =
+    (searchParams?.get("websiteFilter") as any) || "all";
   const initialStatus = searchParams?.get("status") || "all";
   const initialPriority = searchParams?.get("priority") || "all";
   const initialFollowUp = searchParams?.get("followUp") || "all";
   const initialAssignedTo = searchParams?.get("assignedTo") || "all";
-  const initialSortBy = (searchParams?.get("sortBy") as any) || "default";
-  const initialPage = Math.max(1, Number(searchParams?.get("page")) || 1);
-  const initialLimit = Math.max(1, Number(searchParams?.get("limit")) || 10);
+  const initialSortBy =
+    (searchParams?.get("sortBy") as any) || "default";
+  const initialPage = Math.max(
+    1,
+    Number(searchParams?.get("page")) || 1,
+  );
+  const initialLimit = Math.max(
+    1,
+    Number(searchParams?.get("limit")) || 10,
+  );
 
   const [tableSearch, setTableSearch] = useState(initialSearch);
-  const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
-  const [sourceFilter, setSourceFilter] = useState<string>(initialSource);
+  const [debouncedSearch, setDebouncedSearch] =
+    useState(initialSearch);
+  const [sourceFilter, setSourceFilter] =
+    useState<string>(initialSource);
   const [websiteFilter, setWebsiteFilter] = useState<
     "all" | "no-website" | "has-website"
   >(initialWebsite);
-  const [statusFilter, setStatusFilter] = useState<string>(initialStatus);
-  const [priorityFilter, setPriorityFilter] = useState<string>(initialPriority);
-  const [followUpFilter, setFollowUpFilter] = useState<string>(initialFollowUp);
-  const [assignedToFilter, setAssignedToFilter] = useState<string>(initialAssignedTo);
+  const [statusFilter, setStatusFilter] =
+    useState<string>(initialStatus);
+  const [priorityFilter, setPriorityFilter] =
+    useState<string>(initialPriority);
+  const [followUpFilter, setFollowUpFilter] =
+    useState<string>(initialFollowUp);
+  const [assignedToFilter, setAssignedToFilter] =
+    useState<string>(initialAssignedTo);
   const [sortBy, setSortBy] = useState<string>(initialSortBy);
   const [page, setPage] = useState<number>(initialPage);
   const [limit, setLimit] = useState<number>(initialLimit);
@@ -271,11 +301,15 @@ export default function LeadsDashboard({
     const params = new URLSearchParams();
     if (debouncedSearch) params.set("search", debouncedSearch);
     if (sourceFilter !== "all") params.set("source", sourceFilter);
-    if (websiteFilter !== "all") params.set("websiteFilter", websiteFilter);
+    if (websiteFilter !== "all")
+      params.set("websiteFilter", websiteFilter);
     if (statusFilter !== "all") params.set("status", statusFilter);
-    if (priorityFilter !== "all") params.set("priority", priorityFilter);
-    if (followUpFilter !== "all") params.set("followUp", followUpFilter);
-    if (assignedToFilter !== "all") params.set("assignedTo", assignedToFilter);
+    if (priorityFilter !== "all")
+      params.set("priority", priorityFilter);
+    if (followUpFilter !== "all")
+      params.set("followUp", followUpFilter);
+    if (assignedToFilter !== "all")
+      params.set("assignedTo", assignedToFilter);
     if (sortBy !== "default") params.set("sortBy", sortBy);
     if (page > 1) params.set("page", String(page));
     if (limit !== 10) params.set("limit", String(limit));
@@ -314,8 +348,8 @@ export default function LeadsDashboard({
         assignedToFilter === "me"
           ? session?.user?.id || session?.user?.email
           : assignedToFilter !== "all"
-          ? assignedToFilter
-          : undefined,
+            ? assignedToFilter
+            : undefined,
       groupId: targetGroupId || undefined,
       sortBy: sortBy !== "default" ? sortBy : undefined,
     };
@@ -378,7 +412,7 @@ export default function LeadsDashboard({
     assignedToFilter !== "all" ||
     debouncedSearch ||
     tableSearch ||
-    sortBy !== "default"
+    sortBy !== "default",
   );
 
   const handleResetFilters = useCallback(() => {
@@ -404,9 +438,12 @@ export default function LeadsDashboard({
     newStatus: LeadStatus,
   ) => {
     const currentLead = leads.find((l) => l.leadId === leadId);
-    if (currentLead && !isStatusTransitionAllowed(currentLead.status, newStatus)) {
+    if (
+      currentLead &&
+      !isStatusTransitionAllowed(currentLead.status, newStatus)
+    ) {
       setSyncFeedback(
-        `Cannot change status from "${(currentLead.status || "uncontacted").replace("_", " ")}" to "${newStatus.replace("_", " ")}"`
+        `Cannot change status from "${(currentLead.status || "uncontacted").replace("_", " ")}" to "${newStatus.replace("_", " ")}"`,
       );
       setTimeout(() => setSyncFeedback(null), 3500);
       return;
@@ -428,15 +465,50 @@ export default function LeadsDashboard({
         },
       });
       refetchLeads();
-      setSyncFeedback(`Status updated to "${newStatus.replace("_", " ")}"`);
+      setSyncFeedback(
+        `Status updated to "${newStatus.replace("_", " ")}"`,
+      );
       setTimeout(() => setSyncFeedback(null), 2500);
     } catch (err) {
       console.error("Failed to update status:", err);
     }
   };
 
-  const [activeFollowUpLeadId, setActiveFollowUpLeadId] = useState<string | null>(null);
-  const [activeFollowUpTime, setActiveFollowUpTime] = useState<string>("10:00");
+  // Quick 1-click priority change from table row
+  const handleQuickPriorityChange = async (
+    leadId: string,
+    newPriority: LeadPriority,
+  ) => {
+    try {
+      await updateLeadMutation({
+        id: leadId,
+        data: {
+          priority: newPriority,
+          groupId: targetGroupId,
+          updatedBy: session?.user
+            ? {
+                userId: session.user.id,
+                name: session.user.name,
+                email: session.user.email,
+              }
+            : undefined,
+        },
+      });
+      refetchLeads();
+      setSyncFeedback(
+        `Priority updated to "${newPriority.charAt(0).toUpperCase() + newPriority.slice(1)}"`,
+      );
+      setTimeout(() => setSyncFeedback(null), 2500);
+    } catch (err) {
+      console.error("Failed to update priority:", err);
+    }
+  };
+
+  const [activeFollowUpLeadId, setActiveFollowUpLeadId] = useState<
+    string | null
+  >(null);
+  const [activeFollowUpTime, setActiveFollowUpTime] =
+    useState<string>("10:00");
 
   const handleQuickFollowUpChange = async (
     leadId: string,
@@ -462,7 +534,7 @@ export default function LeadsDashboard({
       setSyncFeedback(
         newFollowUpDate
           ? `Follow-up set to ${formatShortDateTime(newFollowUpDate)}`
-          : "Follow-up date cleared"
+          : "Follow-up date cleared",
       );
       setTimeout(() => setSyncFeedback(null), 2500);
     } catch (err) {
@@ -470,7 +542,10 @@ export default function LeadsDashboard({
     }
   };
 
-  const handleQuickPresetDate = (leadId: string, daysFromNow: number) => {
+  const handleQuickPresetDate = (
+    leadId: string,
+    daysFromNow: number,
+  ) => {
     const targetDate = new Date();
     targetDate.setDate(targetDate.getDate() + daysFromNow);
     const [h, m] = activeFollowUpTime.split(":").map(Number);
@@ -479,31 +554,43 @@ export default function LeadsDashboard({
   };
 
   // Separate Modal states: View Details, Pipeline & Status, Activity & Notes
-  const [selectedLeadForView, setSelectedLeadForView] = useState<Lead | null>(null);
+  const [selectedLeadForView, setSelectedLeadForView] =
+    useState<Lead | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
-  const [selectedLeadForPipeline, setSelectedLeadForPipeline] = useState<Lead | null>(null);
-  const [isPipelineModalOpen, setIsPipelineModalOpen] = useState(false);
+  const [selectedLeadForPipeline, setSelectedLeadForPipeline] =
+    useState<Lead | null>(null);
+  const [isPipelineModalOpen, setIsPipelineModalOpen] =
+    useState(false);
 
-  const [selectedLeadForNotes, setSelectedLeadForNotes] = useState<Lead | null>(null);
+  const [selectedLeadForNotes, setSelectedLeadForNotes] =
+    useState<Lead | null>(null);
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
 
   // Delete lead state & mutation
   const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
-  const [isDeleteLeadModalOpen, setIsDeleteLeadModalOpen] = useState(false);
-  const { mutateAsync: deleteLeadMutation, isPending: isDeletingLead } = useDelete(
-    "/leads",
-    { invalidateQueries: [["/leads"], ["/search-groups"]] }
-  );
+  const [isDeleteLeadModalOpen, setIsDeleteLeadModalOpen] =
+    useState(false);
+  const {
+    mutateAsync: deleteLeadMutation,
+    isPending: isDeletingLead,
+  } = useDelete("/leads", {
+    invalidateQueries: [["/leads"], ["/search-groups"]],
+  });
 
   // Delete group state & mutation
-  const [isDeleteGroupModalOpen, setIsDeleteGroupModalOpen] = useState(false);
-  const { mutateAsync: deleteGroupMutation, isPending: isDeletingGroup } = useDelete(
-    "/search-groups",
-    { invalidateQueries: [["/search-groups"], ["/leads"]] }
-  );
+  const [isDeleteGroupModalOpen, setIsDeleteGroupModalOpen] =
+    useState(false);
+  const {
+    mutateAsync: deleteGroupMutation,
+    isPending: isDeletingGroup,
+  } = useDelete("/search-groups", {
+    invalidateQueries: [["/search-groups"], ["/leads"]],
+  });
 
-  const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
+  const [syncFeedback, setSyncFeedback] = useState<string | null>(
+    null,
+  );
 
   const handleOpenViewDetails = (lead: Lead) => {
     setSelectedLeadForView(lead);
@@ -675,30 +762,33 @@ export default function LeadsDashboard({
                 Website)
               </Badge>
             )}
-            {meta.interestedCount !== undefined && meta.interestedCount > 0 && (
-              <Badge
-                variant="default"
-                className="text-[10px] gap-1 font-semibold bg-emerald-100 text-emerald-800 border-emerald-300"
-              >
-                🔥 {meta.interestedCount} Interested
-              </Badge>
-            )}
-            {meta.overdueCount !== undefined && meta.overdueCount > 0 && (
-              <Badge
-                variant="terracotta"
-                className="text-[10px] gap-1 font-semibold bg-rose-100 text-rose-800 border-rose-300 animate-pulse"
-              >
-                ⚠️ {meta.overdueCount} Overdue Follow-up
-              </Badge>
-            )}
-            {meta.convertedCount !== undefined && meta.convertedCount > 0 && (
-              <Badge
-                variant="default"
-                className="text-[10px] gap-1 font-semibold bg-green-100 text-green-900 border-green-300"
-              >
-                🎉 {meta.convertedCount} Converted
-              </Badge>
-            )}
+            {meta.interestedCount !== undefined &&
+              meta.interestedCount > 0 && (
+                <Badge
+                  variant="default"
+                  className="text-[10px] gap-1 font-semibold bg-emerald-100 text-emerald-800 border-emerald-300"
+                >
+                  🔥 {meta.interestedCount} Interested
+                </Badge>
+              )}
+            {meta.overdueCount !== undefined &&
+              meta.overdueCount > 0 && (
+                <Badge
+                  variant="terracotta"
+                  className="text-[10px] gap-1 font-semibold bg-rose-100 text-rose-800 border-rose-300 animate-pulse"
+                >
+                  ⚠️ {meta.overdueCount} Overdue Follow-up
+                </Badge>
+              )}
+            {meta.convertedCount !== undefined &&
+              meta.convertedCount > 0 && (
+                <Badge
+                  variant="default"
+                  className="text-[10px] gap-1 font-semibold bg-green-100 text-green-900 border-green-300"
+                >
+                  🎉 {meta.convertedCount} Converted
+                </Badge>
+              )}
             {group?.groupId && (
               <span className="text-xs text-stone-400 bg-oatmeal-200/70 px-2 py-0.5 rounded-md">
                 {group.groupId}
@@ -865,12 +955,22 @@ export default function LeadsDashboard({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Status: All</SelectItem>
-                  <SelectItem value="uncontacted">🔵 Uncontacted</SelectItem>
+                  <SelectItem value="uncontacted">
+                    🔵 Uncontacted
+                  </SelectItem>
                   <SelectItem value="called">📞 Called</SelectItem>
-                  <SelectItem value="call_later">⏰ Call Later</SelectItem>
-                  <SelectItem value="interested">🔥 Interested</SelectItem>
-                  <SelectItem value="not_interested">🚫 Not Interested</SelectItem>
-                  <SelectItem value="converted">🎉 Converted</SelectItem>
+                  <SelectItem value="call_later">
+                    ⏰ Call Later
+                  </SelectItem>
+                  <SelectItem value="interested">
+                    🔥 Interested
+                  </SelectItem>
+                  <SelectItem value="not_interested">
+                    🚫 Not Interested
+                  </SelectItem>
+                  <SelectItem value="converted">
+                    🎉 Converted
+                  </SelectItem>
                   <SelectItem value="invalid">❌ Invalid</SelectItem>
                 </SelectContent>
               </Select>
@@ -893,7 +993,9 @@ export default function LeadsDashboard({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Priority: All</SelectItem>
-                  <SelectItem value="high">🔥 High Priority</SelectItem>
+                  <SelectItem value="high">
+                    🔥 High Priority
+                  </SelectItem>
                   <SelectItem value="medium">⚡ Medium</SelectItem>
                   <SelectItem value="low">❄️ Low Priority</SelectItem>
                 </SelectContent>
@@ -920,11 +1022,19 @@ export default function LeadsDashboard({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Follow-Up: All</SelectItem>
-                  <SelectItem value="overdue">⚠️ Overdue Follow-ups</SelectItem>
+                  <SelectItem value="overdue">
+                    ⚠️ Overdue Follow-ups
+                  </SelectItem>
                   <SelectItem value="today">📅 Due Today</SelectItem>
-                  <SelectItem value="upcoming">⏳ Upcoming</SelectItem>
-                  <SelectItem value="has-followup">📌 Has Follow-up Set</SelectItem>
-                  <SelectItem value="no-followup">No Follow-up</SelectItem>
+                  <SelectItem value="upcoming">
+                    ⏳ Upcoming
+                  </SelectItem>
+                  <SelectItem value="has-followup">
+                    📌 Has Follow-up Set
+                  </SelectItem>
+                  <SelectItem value="no-followup">
+                    No Follow-up
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -973,7 +1083,9 @@ export default function LeadsDashboard({
                   </div>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Source: All Platforms</SelectItem>
+                  <SelectItem value="all">
+                    Source: All Platforms
+                  </SelectItem>
                   {uniqueSources.map((source) => (
                     <SelectItem key={source} value={source}>
                       {source}
@@ -1077,10 +1189,15 @@ export default function LeadsDashboard({
             </TableHeader>
             <TableBody>
               {loading && leads.length === 0 ? (
-                <LeadTableSkeletonRows rows={limit > 10 ? 10 : limit} />
+                <LeadTableSkeletonRows
+                  rows={limit > 10 ? 10 : limit}
+                />
               ) : leads.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="p-8 sm:p-12 text-center">
+                  <TableCell
+                    colSpan={7}
+                    className="p-8 sm:p-12 text-center"
+                  >
                     <EmptyState
                       compact
                       icon={hasActiveFilters ? FilterX : Users}
@@ -1142,7 +1259,9 @@ export default function LeadsDashboard({
                               <span className="text-[11px] text-stone-400 truncate max-w-[140px]">
                                 {lead.address || "No address"}
                               </span>
-                              <span className="text-stone-300">•</span>
+                              <span className="text-stone-300">
+                                •
+                              </span>
                               {getSourceBadge(lead.source)}
                             </div>
                           </div>
@@ -1165,9 +1284,17 @@ export default function LeadsDashboard({
                               </button>
                             }
                           />
-                          <DropdownMenuContent align="start" className="w-52 p-1">
+                          <DropdownMenuContent
+                            align="start"
+                            className="w-52 p-1"
+                          >
                             <DropdownMenuItem
-                              disabled={!isStatusTransitionAllowed(lead.status, "uncontacted")}
+                              disabled={
+                                !isStatusTransitionAllowed(
+                                  lead.status,
+                                  "uncontacted",
+                                )
+                              }
                               onClick={() =>
                                 handleQuickStatusChange(
                                   lead.leadId,
@@ -1175,28 +1302,49 @@ export default function LeadsDashboard({
                                 )
                               }
                               className={
-                                !isStatusTransitionAllowed(lead.status, "uncontacted")
-                                  ? "opacity-40 cursor-not-allowed text-stone-400"
-                                  : ""
+                                !isStatusTransitionAllowed(
+                                  lead.status,
+                                  "uncontacted",
+                                )
+                                  ? "opacity-40 cursor-not-allowed text-stone-400 gap-2 text-xs"
+                                  : "gap-2 cursor-pointer text-xs"
                               }
                             >
-                              <span>🔵 Uncontacted (New)</span>
+                              <CircleDot className="h-3.5 w-3.5 text-stone-500 shrink-0" />
+                              <span>Uncontacted (New)</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              disabled={!isStatusTransitionAllowed(lead.status, "called")}
+                              disabled={
+                                !isStatusTransitionAllowed(
+                                  lead.status,
+                                  "called",
+                                )
+                              }
                               onClick={() =>
-                                handleQuickStatusChange(lead.leadId, "called")
+                                handleQuickStatusChange(
+                                  lead.leadId,
+                                  "called",
+                                )
                               }
                               className={
-                                !isStatusTransitionAllowed(lead.status, "called")
-                                  ? "opacity-40 cursor-not-allowed text-stone-400"
-                                  : ""
+                                !isStatusTransitionAllowed(
+                                  lead.status,
+                                  "called",
+                                )
+                                  ? "opacity-40 cursor-not-allowed text-stone-400 gap-2 text-xs"
+                                  : "gap-2 cursor-pointer text-xs"
                               }
                             >
-                              <span>📞 Called (Attempted)</span>
+                              <PhoneCall className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                              <span>Called (Attempted)</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              disabled={!isStatusTransitionAllowed(lead.status, "call_later")}
+                              disabled={
+                                !isStatusTransitionAllowed(
+                                  lead.status,
+                                  "call_later",
+                                )
+                              }
                               onClick={() =>
                                 handleQuickStatusChange(
                                   lead.leadId,
@@ -1204,15 +1352,24 @@ export default function LeadsDashboard({
                                 )
                               }
                               className={
-                                !isStatusTransitionAllowed(lead.status, "call_later")
-                                  ? "opacity-40 cursor-not-allowed text-stone-400"
-                                  : ""
+                                !isStatusTransitionAllowed(
+                                  lead.status,
+                                  "call_later",
+                                )
+                                  ? "opacity-40 cursor-not-allowed text-stone-400 gap-2 text-xs"
+                                  : "gap-2 cursor-pointer text-xs"
                               }
                             >
-                              <span>⏰ Call Later</span>
+                              <Clock className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                              <span>Call Later</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              disabled={!isStatusTransitionAllowed(lead.status, "interested")}
+                              disabled={
+                                !isStatusTransitionAllowed(
+                                  lead.status,
+                                  "interested",
+                                )
+                              }
                               onClick={() =>
                                 handleQuickStatusChange(
                                   lead.leadId,
@@ -1220,15 +1377,24 @@ export default function LeadsDashboard({
                                 )
                               }
                               className={
-                                !isStatusTransitionAllowed(lead.status, "interested")
-                                  ? "opacity-40 cursor-not-allowed text-stone-400"
-                                  : ""
+                                !isStatusTransitionAllowed(
+                                  lead.status,
+                                  "interested",
+                                )
+                                  ? "opacity-40 cursor-not-allowed text-stone-400 gap-2 text-xs"
+                                  : "gap-2 cursor-pointer text-xs"
                               }
                             >
-                              <span>🔥 Interested (Hot)</span>
+                              <Flame className="h-3.5 w-3.5 text-rose-600 shrink-0" />
+                              <span>Interested (Hot)</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              disabled={!isStatusTransitionAllowed(lead.status, "not_interested")}
+                              disabled={
+                                !isStatusTransitionAllowed(
+                                  lead.status,
+                                  "not_interested",
+                                )
+                              }
                               onClick={() =>
                                 handleQuickStatusChange(
                                   lead.leadId,
@@ -1236,15 +1402,24 @@ export default function LeadsDashboard({
                                 )
                               }
                               className={
-                                !isStatusTransitionAllowed(lead.status, "not_interested")
-                                  ? "opacity-40 cursor-not-allowed text-stone-400"
-                                  : ""
+                                !isStatusTransitionAllowed(
+                                  lead.status,
+                                  "not_interested",
+                                )
+                                  ? "opacity-40 cursor-not-allowed text-stone-400 gap-2 text-xs"
+                                  : "gap-2 cursor-pointer text-xs"
                               }
                             >
-                              <span>🚫 Not Interested</span>
+                              <UserX className="h-3.5 w-3.5 text-stone-500 shrink-0" />
+                              <span>Not Interested</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              disabled={!isStatusTransitionAllowed(lead.status, "converted")}
+                              disabled={
+                                !isStatusTransitionAllowed(
+                                  lead.status,
+                                  "converted",
+                                )
+                              }
                               onClick={() =>
                                 handleQuickStatusChange(
                                   lead.leadId,
@@ -1252,25 +1427,41 @@ export default function LeadsDashboard({
                                 )
                               }
                               className={
-                                !isStatusTransitionAllowed(lead.status, "converted")
-                                  ? "opacity-40 cursor-not-allowed text-stone-400"
-                                  : ""
+                                !isStatusTransitionAllowed(
+                                  lead.status,
+                                  "converted",
+                                )
+                                  ? "opacity-40 cursor-not-allowed text-stone-400 gap-2 text-xs"
+                                  : "gap-2 cursor-pointer text-xs"
                               }
                             >
-                              <span>🎉 Converted (Won)</span>
+                              <Trophy className="h-3.5 w-3.5 text-teal-600 shrink-0" />
+                              <span>Converted (Won)</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              disabled={!isStatusTransitionAllowed(lead.status, "invalid")}
+                              disabled={
+                                !isStatusTransitionAllowed(
+                                  lead.status,
+                                  "invalid",
+                                )
+                              }
                               onClick={() =>
-                                handleQuickStatusChange(lead.leadId, "invalid")
+                                handleQuickStatusChange(
+                                  lead.leadId,
+                                  "invalid",
+                                )
                               }
                               className={
-                                !isStatusTransitionAllowed(lead.status, "invalid")
-                                  ? "opacity-40 cursor-not-allowed text-stone-400"
-                                  : ""
+                                !isStatusTransitionAllowed(
+                                  lead.status,
+                                  "invalid",
+                                )
+                                  ? "opacity-40 cursor-not-allowed text-stone-400 gap-2 text-xs"
+                                  : "gap-2 cursor-pointer text-xs"
                               }
                             >
-                              <span>❌ Invalid / Dead</span>
+                              <Ban className="h-3.5 w-3.5 text-zinc-500 shrink-0" />
+                              <span>Invalid / Dead</span>
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -1282,7 +1473,9 @@ export default function LeadsDashboard({
                           {lead.email ? (
                             <div className="flex items-center gap-1.5 text-stone-700 font-medium truncate max-w-[170px]">
                               <Mail className="h-3 w-3 text-sage-600 shrink-0" />
-                              <span className="truncate">{lead.email}</span>
+                              <span className="truncate">
+                                {lead.email}
+                              </span>
                             </div>
                           ) : (
                             <span className="text-[11px] text-stone-400 italic">
@@ -1310,7 +1503,60 @@ export default function LeadsDashboard({
                       >
                         <div className="flex flex-col gap-1 text-xs">
                           <div className="flex items-center gap-1.5">
-                            {getPriorityBadge(lead.priority)}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger
+                                render={
+                                  <button
+                                    type="button"
+                                    className="cursor-pointer focus:outline-none focus:ring-1 focus:ring-botanical-500/40 rounded transition-transform active:scale-95"
+                                    title="Click to change Priority"
+                                  >
+                                    {getPriorityBadge(lead.priority)}
+                                  </button>
+                                }
+                              />
+                              <DropdownMenuContent
+                                align="start"
+                                className="w-32 p-1 bg-[#FCFBF8] border-stone-200 shadow-md text-xs"
+                              >
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    handleQuickPriorityChange(
+                                      lead.leadId,
+                                      "high",
+                                    )
+                                  }
+                                  className="gap-2 cursor-pointer font-medium text-rose-700 hover:bg-rose-50"
+                                >
+                                  <ArrowUp className="h-3.5 w-3.5 text-rose-600 shrink-0" />
+                                  <span>High</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    handleQuickPriorityChange(
+                                      lead.leadId,
+                                      "medium",
+                                    )
+                                  }
+                                  className="gap-2 cursor-pointer font-medium text-amber-800 hover:bg-amber-50"
+                                >
+                                  <Equal className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                                  <span>Medium</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    handleQuickPriorityChange(
+                                      lead.leadId,
+                                      "low",
+                                    )
+                                  }
+                                  className="gap-2 cursor-pointer font-medium text-stone-700 hover:bg-stone-100"
+                                >
+                                  <ArrowDown className="h-3.5 w-3.5 text-stone-500 shrink-0" />
+                                  <span>Low</span>
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                             {lead.dealValue ? (
                               <span className="text-[10px] font-bold text-botanical-800 bg-sage-100/80 px-1.5 py-0.2 rounded">
                                 ${lead.dealValue}
@@ -1320,15 +1566,25 @@ export default function LeadsDashboard({
 
                           {/* Quick Follow-Up Calendar Popover */}
                           <Popover
-                            open={activeFollowUpLeadId === lead.leadId}
+                            open={
+                              activeFollowUpLeadId === lead.leadId
+                            }
                             onOpenChange={(open) => {
                               if (open) {
                                 setActiveFollowUpLeadId(lead.leadId);
                                 if (lead.followUpDate) {
-                                  const d = new Date(lead.followUpDate);
-                                  const hh = String(d.getHours()).padStart(2, "0");
-                                  const mm = String(d.getMinutes()).padStart(2, "0");
-                                  setActiveFollowUpTime(`${hh}:${mm}`);
+                                  const d = new Date(
+                                    lead.followUpDate,
+                                  );
+                                  const hh = String(
+                                    d.getHours(),
+                                  ).padStart(2, "0");
+                                  const mm = String(
+                                    d.getMinutes(),
+                                  ).padStart(2, "0");
+                                  setActiveFollowUpTime(
+                                    `${hh}:${mm}`,
+                                  );
                                 } else {
                                   setActiveFollowUpTime("10:00");
                                 }
@@ -1353,11 +1609,16 @@ export default function LeadsDashboard({
                                       "invalid",
                                     ].includes(lead.status || "") ? (
                                       <span className="font-bold text-terracotta-700 bg-terracotta-100 px-1.5 py-0.2 rounded">
-                                        Overdue: {formatShortDateTime(lead.followUpDate)}
+                                        Overdue:{" "}
+                                        {formatShortDateTime(
+                                          lead.followUpDate,
+                                        )}
                                       </span>
                                     ) : (
                                       <span className="font-medium text-stone-700 group-hover:text-botanical-900">
-                                        {formatShortDateTime(lead.followUpDate)}
+                                        {formatShortDateTime(
+                                          lead.followUpDate,
+                                        )}
                                       </span>
                                     )
                                   ) : (
@@ -1382,7 +1643,10 @@ export default function LeadsDashboard({
                                     <button
                                       type="button"
                                       onClick={() =>
-                                        handleQuickFollowUpChange(lead.leadId, null)
+                                        handleQuickFollowUpChange(
+                                          lead.leadId,
+                                          null,
+                                        )
                                       }
                                       className="text-[11px] text-terracotta-700 hover:text-terracotta-900 hover:underline font-semibold cursor-pointer"
                                     >
@@ -1395,21 +1659,36 @@ export default function LeadsDashboard({
                                 <div className="flex items-center gap-1 px-1">
                                   <button
                                     type="button"
-                                    onClick={() => handleQuickPresetDate(lead.leadId, 1)}
+                                    onClick={() =>
+                                      handleQuickPresetDate(
+                                        lead.leadId,
+                                        1,
+                                      )
+                                    }
                                     className="text-[10px] px-2 py-0.5 rounded-lg bg-oatmeal-100/90 hover:bg-oatmeal-200 text-stone-700 hover:text-botanical-900 font-semibold border border-stone-200/60 transition-colors cursor-pointer"
                                   >
                                     Tomorrow
                                   </button>
                                   <button
                                     type="button"
-                                    onClick={() => handleQuickPresetDate(lead.leadId, 3)}
+                                    onClick={() =>
+                                      handleQuickPresetDate(
+                                        lead.leadId,
+                                        3,
+                                      )
+                                    }
                                     className="text-[10px] px-2 py-0.5 rounded-lg bg-oatmeal-100/90 hover:bg-oatmeal-200 text-stone-700 hover:text-botanical-900 font-semibold border border-stone-200/60 transition-colors cursor-pointer"
                                   >
                                     In 3 Days
                                   </button>
                                   <button
                                     type="button"
-                                    onClick={() => handleQuickPresetDate(lead.leadId, 7)}
+                                    onClick={() =>
+                                      handleQuickPresetDate(
+                                        lead.leadId,
+                                        7,
+                                      )
+                                    }
                                     className="text-[10px] px-2 py-0.5 rounded-lg bg-oatmeal-100/90 hover:bg-oatmeal-200 text-stone-700 hover:text-botanical-900 font-semibold border border-stone-200/60 transition-colors cursor-pointer"
                                   >
                                     Next Week
@@ -1425,12 +1704,26 @@ export default function LeadsDashboard({
                                   }
                                   onSelect={(date) => {
                                     if (date) {
-                                      const [h, m] = activeFollowUpTime.split(":").map(Number);
+                                      const [h, m] =
+                                        activeFollowUpTime
+                                          .split(":")
+                                          .map(Number);
                                       const combined = new Date(date);
-                                      combined.setHours(isNaN(h) ? 10 : h, isNaN(m) ? 0 : m, 0, 0);
-                                      handleQuickFollowUpChange(lead.leadId, combined.getTime());
+                                      combined.setHours(
+                                        isNaN(h) ? 10 : h,
+                                        isNaN(m) ? 0 : m,
+                                        0,
+                                        0,
+                                      );
+                                      handleQuickFollowUpChange(
+                                        lead.leadId,
+                                        combined.getTime(),
+                                      );
                                     } else {
-                                      handleQuickFollowUpChange(lead.leadId, null);
+                                      handleQuickFollowUpChange(
+                                        lead.leadId,
+                                        null,
+                                      );
                                     }
                                   }}
                                   disabled={(date) => {
@@ -1452,13 +1745,28 @@ export default function LeadsDashboard({
                                       type="time"
                                       value={activeFollowUpTime}
                                       onChange={(e) => {
-                                        const newTime = e.target.value;
-                                        setActiveFollowUpTime(newTime);
+                                        const newTime =
+                                          e.target.value;
+                                        setActiveFollowUpTime(
+                                          newTime,
+                                        );
                                         if (lead.followUpDate) {
-                                          const [h, m] = newTime.split(":").map(Number);
-                                          const updated = new Date(lead.followUpDate);
-                                          updated.setHours(isNaN(h) ? 10 : h, isNaN(m) ? 0 : m, 0, 0);
-                                          handleQuickFollowUpChange(lead.leadId, updated.getTime());
+                                          const [h, m] = newTime
+                                            .split(":")
+                                            .map(Number);
+                                          const updated = new Date(
+                                            lead.followUpDate,
+                                          );
+                                          updated.setHours(
+                                            isNaN(h) ? 10 : h,
+                                            isNaN(m) ? 0 : m,
+                                            0,
+                                            0,
+                                          );
+                                          handleQuickFollowUpChange(
+                                            lead.leadId,
+                                            updated.getTime(),
+                                          );
                                         }
                                       }}
                                       className="h-8 px-2.5 rounded-lg border border-stone-300 bg-paper text-xs font-semibold text-stone-800 focus:outline-none focus:ring-1 focus:ring-botanical-500"
@@ -1467,26 +1775,47 @@ export default function LeadsDashboard({
 
                                   {/* Quick Time Slots */}
                                   <div className="flex items-center justify-between gap-1 pt-0.5">
-                                    {["09:30", "11:00", "14:30", "16:00"].map((slot) => {
-                                      const [h, m] = slot.split(":").map(Number);
+                                    {[
+                                      "09:30",
+                                      "11:00",
+                                      "14:30",
+                                      "16:00",
+                                    ].map((slot) => {
+                                      const [h, m] = slot
+                                        .split(":")
+                                        .map(Number);
                                       const label = `${h > 12 ? h - 12 : h}:${m === 0 ? "00" : m} ${h >= 12 ? "PM" : "AM"}`;
                                       return (
                                         <button
                                           key={slot}
                                           type="button"
                                           onClick={() => {
-                                            setActiveFollowUpTime(slot);
+                                            setActiveFollowUpTime(
+                                              slot,
+                                            );
                                             if (lead.followUpDate) {
-                                              const updated = new Date(lead.followUpDate);
-                                              updated.setHours(h, m, 0, 0);
-                                              handleQuickFollowUpChange(lead.leadId, updated.getTime());
+                                              const updated =
+                                                new Date(
+                                                  lead.followUpDate,
+                                                );
+                                              updated.setHours(
+                                                h,
+                                                m,
+                                                0,
+                                                0,
+                                              );
+                                              handleQuickFollowUpChange(
+                                                lead.leadId,
+                                                updated.getTime(),
+                                              );
                                             }
                                           }}
                                           className={cn(
                                             "text-[10px] px-2 py-0.5 rounded-md border transition-colors cursor-pointer font-medium",
-                                            activeFollowUpTime === slot
+                                            activeFollowUpTime ===
+                                              slot
                                               ? "bg-botanical-800 text-white border-botanical-900 font-bold shadow-2xs"
-                                              : "bg-oatmeal-100 border-stone-200/80 text-stone-600 hover:bg-oatmeal-200"
+                                              : "bg-oatmeal-100 border-stone-200/80 text-stone-600 hover:bg-oatmeal-200",
                                           )}
                                         >
                                           {label}
@@ -1506,12 +1835,14 @@ export default function LeadsDashboard({
                         <div className="flex items-center gap-2">
                           <div className="flex h-6 w-6 items-center justify-center rounded-full bg-botanical-100 text-botanical-800 text-[10px] font-bold shrink-0">
                             {lead.assignedTo?.name
-                              ? lead.assignedTo.name.charAt(0).toUpperCase()
-                              : lead.lastContactedBy?.name
-                              ? lead.lastContactedBy.name
+                              ? lead.assignedTo.name
                                   .charAt(0)
                                   .toUpperCase()
-                              : "?"}
+                              : lead.lastContactedBy?.name
+                                ? lead.lastContactedBy.name
+                                    .charAt(0)
+                                    .toUpperCase()
+                                : "?"}
                           </div>
                           <div className="min-w-0">
                             <p className="text-xs font-semibold text-stone-800 truncate max-w-[100px]">
@@ -1522,7 +1853,9 @@ export default function LeadsDashboard({
                             {lead.callCount && lead.callCount > 0 ? (
                               <p className="text-[10px] text-stone-400">
                                 {lead.callCount}{" "}
-                                {lead.callCount === 1 ? "call" : "calls"}
+                                {lead.callCount === 1
+                                  ? "call"
+                                  : "calls"}
                               </p>
                             ) : null}
                           </div>
@@ -1583,9 +1916,14 @@ export default function LeadsDashboard({
                               </button>
                             }
                           />
-                          <DropdownMenuContent align="end" className="w-52 p-1 text-xs">
+                          <DropdownMenuContent
+                            align="end"
+                            className="w-52 p-1 text-xs"
+                          >
                             <DropdownMenuItem
-                              onClick={() => handleOpenViewDetails(lead)}
+                              onClick={() =>
+                                handleOpenViewDetails(lead)
+                              }
                               className="gap-2 cursor-pointer"
                             >
                               <Eye className="h-3.5 w-3.5 text-stone-500" />
@@ -1603,7 +1941,10 @@ export default function LeadsDashboard({
                               className="gap-2 cursor-pointer"
                             >
                               <MessageSquare className="h-3.5 w-3.5 text-stone-600" />
-                              <span>Activity & Notes ({lead.notes?.length || 0})</span>
+                              <span>
+                                Activity & Notes (
+                                {lead.notes?.length || 0})
+                              </span>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
@@ -1685,7 +2026,9 @@ export default function LeadsDashboard({
       <LeadFormModal
         isOpen={isAddLeadOpen}
         onClose={() => setIsAddLeadOpen(false)}
-        targetGroup={group || { groupId: targetGroupId, query: groupQuery }}
+        targetGroup={
+          group || { groupId: targetGroupId, query: groupQuery }
+        }
         onSuccess={() => {
           refetchLeads();
           refetchGroup();
@@ -1722,11 +2065,8 @@ export default function LeadsDashboard({
         title="Delete Search Group"
         description="Are you sure you want to delete this entire search group? This will permanently delete the search group along with all leads collected within it."
         itemName={groupQuery}
-        warningNote={
-          totalLeadsCount > 0
-            ? `All ${totalLeadsCount} leads in this search group will be permanently deleted.`
-            : undefined
-        }
+        requireConfirmationWord="CONFIRM"
+        warningNote="Warning: All leads belonging to this search group will be permanently deleted."
         isDeleting={isDeletingGroup}
       />
     </div>

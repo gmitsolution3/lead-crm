@@ -77,7 +77,7 @@ export function UserManagementSystem() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [roleFilter, setRoleFilter] = useState<
-    "all" | "admin" | "user"
+    "all" | "admin" | "moderator" | "user"
   >(initialRole);
   const [statusFilter, setStatusFilter] = useState<
     "all" | "active" | "banned" | "pending"
@@ -141,7 +141,7 @@ export function UserManagementSystem() {
   // Update Role (Promote / Demote)
   const handleUpdateRole = async (
     userId: string,
-    newRole: "admin" | "user",
+    newRole: "admin" | "moderator" | "user",
   ) => {
     setIsProcessing(true);
     setFeedback(null);
@@ -154,12 +154,15 @@ export function UserManagementSystem() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
+      const successMessages: Record<string, string> = {
+        admin: "User promoted to Administrator! Full console authority granted.",
+        moderator: "User promoted to Moderator! Workspace and lead management access granted.",
+        user: "User demoted to pending user status. Access revoked until approved.",
+      };
+
       setFeedback({
         type: "success",
-        message:
-          newRole === "admin"
-            ? "User promoted to Administrator! Login access granted."
-            : "User demoted to pending user status.",
+        message: successMessages[newRole] || "User role updated successfully.",
       });
       await fetchUsers();
     } catch (err: any) {
@@ -294,7 +297,7 @@ export function UserManagementSystem() {
     } else if (statusFilter === "pending") {
       matchesStatus = !u.banned && u.role === "user";
     } else if (statusFilter === "active") {
-      matchesStatus = !u.banned && u.role === "admin";
+      matchesStatus = !u.banned && (u.role === "admin" || u.role === "moderator");
     }
 
     return matchesSearch && matchesRole && matchesStatus;
@@ -304,6 +307,9 @@ export function UserManagementSystem() {
   const totalCount = users.length;
   const adminCount = users.filter(
     (u) => !u.banned && u.role === "admin",
+  ).length;
+  const moderatorCount = users.filter(
+    (u) => !u.banned && u.role === "moderator",
   ).length;
   const pendingCount = users.filter(
     (u) => !u.banned && u.role === "user",
@@ -347,8 +353,8 @@ export function UserManagementSystem() {
         </div>
       </div>
 
-      {/* 4 Metric Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+      {/* 5 Metric Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
         {/* Total Registered */}
         <div className="rounded-2xl border border-stone-200/90 bg-[#FCFBF8] p-4 shadow-sm">
           <div className="flex items-center justify-between text-xs text-stone-500 mb-1.5">
@@ -381,6 +387,22 @@ export function UserManagementSystem() {
           </p>
         </div>
 
+        {/* Active Moderators */}
+        <div className="rounded-2xl border border-stone-200/90 bg-[#FCFBF8] p-4 shadow-sm">
+          <div className="flex items-center justify-between text-xs text-stone-500 mb-1.5">
+            <span className="font-semibold uppercase tracking-wider text-[10px]">
+              Active Moderators
+            </span>
+            <UserCheck className="h-4 w-4 text-botanical-700" />
+          </div>
+          <p className="text-2xl font-bold text-botanical-900">
+            {moderatorCount}
+          </p>
+          <p className="text-[11px] text-stone-400 mt-0.5">
+            Workspace access
+          </p>
+        </div>
+
         {/* Pending Approvals */}
         <div className="rounded-2xl border border-stone-200/90 bg-[#FCFBF8] p-4 shadow-sm">
           <div className="flex items-center justify-between text-xs text-stone-500 mb-1.5">
@@ -405,7 +427,7 @@ export function UserManagementSystem() {
         </div>
 
         {/* Banned Users */}
-        <div className="rounded-2xl border border-stone-200/90 bg-[#FCFBF8] p-4 shadow-sm">
+        <div className="rounded-2xl border border-stone-200/90 bg-[#FCFBF8] p-4 shadow-sm col-span-2 sm:col-span-1">
           <div className="flex items-center justify-between text-xs text-stone-500 mb-1.5">
             <span className="font-semibold uppercase tracking-wider text-[10px]">
               Banned Accounts
@@ -490,6 +512,9 @@ export function UserManagementSystem() {
                   <SelectItem value="admin">
                     Administrator Only
                   </SelectItem>
+                  <SelectItem value="moderator">
+                    Moderator Only
+                  </SelectItem>
                   <SelectItem value="user">
                     User (Pending) Only
                   </SelectItem>
@@ -514,7 +539,7 @@ export function UserManagementSystem() {
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="active">
-                    Active (Admin)
+                    Active (Admin &amp; Moderator)
                   </SelectItem>
                   <SelectItem value="pending">
                     Pending Approval
@@ -590,6 +615,7 @@ export function UserManagementSystem() {
                 filteredUsers.map((user) => {
                   const isCurrentUser = user.id === currentUserId;
                   const isAdmin = user.role === "admin";
+                  const isModerator = user.role === "moderator";
                   const isBanned = user.banned;
 
                   return (
@@ -613,7 +639,9 @@ export function UserManagementSystem() {
                                   ? "bg-red-100 text-red-700 border border-red-200"
                                   : isAdmin
                                     ? "bg-botanical-700 text-paper"
-                                    : "bg-sage-200 text-botanical-900"
+                                    : isModerator
+                                      ? "bg-sage-600 text-paper"
+                                      : "bg-sage-200 text-botanical-900"
                               }`}
                             >
                               {user.name.charAt(0).toUpperCase()}
@@ -658,10 +686,18 @@ export function UserManagementSystem() {
                             <ShieldCheck className="h-3 w-3" />
                             <span>Administrator</span>
                           </Badge>
-                        ) : (
+                        ) : isModerator ? (
                           <Badge
                             variant="sage"
-                            className="text-[10px] gap-1 font-semibold"
+                            className="text-[10px] gap-1 font-semibold bg-sage-200/90 text-botanical-900 border border-sage-300"
+                          >
+                            <UserCheck className="h-3 w-3 text-botanical-700" />
+                            <span>Moderator</span>
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] gap-1 font-semibold text-amber-700 bg-amber-50 border-amber-200"
                           >
                             <Clock className="h-3 w-3 text-amber-600" />
                             <span>User (Pending)</span>
@@ -676,7 +712,7 @@ export function UserManagementSystem() {
                             <Ban className="h-3 w-3" />
                             <span>Banned</span>
                           </span>
-                        ) : isAdmin ? (
+                        ) : isAdmin || isModerator ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
                             <CheckCircle2 className="h-3 w-3" />
                             <span>Active</span>
@@ -702,17 +738,17 @@ export function UserManagementSystem() {
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           {/* Quick Promotion button for pending users */}
-                          {!isAdmin && !isBanned && (
+                          {!isAdmin && !isModerator && !isBanned && (
                             <Button
                               size="sm"
                               disabled={isProcessing}
                               onClick={() =>
-                                handleUpdateRole(user.id, "admin")
+                                handleUpdateRole(user.id, "moderator")
                               }
                               className="h-8 gap-1 rounded-xl bg-botanical-700 hover:bg-botanical-800 text-paper text-xs font-medium cursor-pointer shadow-xs"
                             >
-                              <ShieldCheck className="h-3.5 w-3.5 text-sage-200" />
-                              <span>Promote</span>
+                              <UserCheck className="h-3.5 w-3.5 text-sage-200" />
+                              <span>Approve</span>
                             </Button>
                           )}
 
@@ -748,7 +784,7 @@ export function UserManagementSystem() {
 
                             <DropdownMenuContent
                               align="end"
-                              className="w-48 p-1.5 bg-[#FCFBF8] border-stone-200"
+                              className="w-52 p-1.5 bg-[#FCFBF8] border-stone-200"
                             >
                               <DropdownMenuGroup>
                                 <DropdownMenuLabel className="text-[10px] uppercase font-bold text-stone-400 px-2 py-1">
@@ -772,32 +808,89 @@ export function UserManagementSystem() {
                               {/* Role Changes */}
                               {!isCurrentUser && !isBanned && (
                                 <DropdownMenuGroup>
-                                  {isAdmin ? (
-                                    <DropdownMenuItem
-                                      onClick={() =>
-                                        handleUpdateRole(
-                                          user.id,
-                                          "user",
-                                        )
-                                      }
-                                      className="text-xs font-medium cursor-pointer gap-2 text-stone-700"
-                                    >
-                                      <Clock className="h-3.5 w-3.5 text-amber-600" />
-                                      <span>Demote to User</span>
-                                    </DropdownMenuItem>
-                                  ) : (
-                                    <DropdownMenuItem
-                                      onClick={() =>
-                                        handleUpdateRole(
-                                          user.id,
-                                          "admin",
-                                        )
-                                      }
-                                      className="text-xs font-medium cursor-pointer gap-2 text-botanical-800"
-                                    >
-                                      <ShieldCheck className="h-3.5 w-3.5 text-botanical-700" />
-                                      <span>Promote to Admin</span>
-                                    </DropdownMenuItem>
+                                  {isAdmin && (
+                                    <>
+                                      <DropdownMenuItem
+                                        onClick={() =>
+                                          handleUpdateRole(
+                                            user.id,
+                                            "moderator",
+                                          )
+                                        }
+                                        className="text-xs font-medium cursor-pointer gap-2 text-botanical-800"
+                                      >
+                                        <UserCheck className="h-3.5 w-3.5 text-sage-600" />
+                                        <span>Demote to Moderator</span>
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() =>
+                                          handleUpdateRole(
+                                            user.id,
+                                            "user",
+                                          )
+                                        }
+                                        className="text-xs font-medium cursor-pointer gap-2 text-stone-700"
+                                      >
+                                        <Clock className="h-3.5 w-3.5 text-amber-600" />
+                                        <span>Demote to User</span>
+                                      </DropdownMenuItem>
+                                    </>
+                                  )}
+                                  {isModerator && (
+                                    <>
+                                      <DropdownMenuItem
+                                        onClick={() =>
+                                          handleUpdateRole(
+                                            user.id,
+                                            "admin",
+                                          )
+                                        }
+                                        className="text-xs font-medium cursor-pointer gap-2 text-botanical-800"
+                                      >
+                                        <ShieldCheck className="h-3.5 w-3.5 text-botanical-700" />
+                                        <span>Promote to Admin</span>
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() =>
+                                          handleUpdateRole(
+                                            user.id,
+                                            "user",
+                                          )
+                                        }
+                                        className="text-xs font-medium cursor-pointer gap-2 text-stone-700"
+                                      >
+                                        <Clock className="h-3.5 w-3.5 text-amber-600" />
+                                        <span>Demote to User</span>
+                                      </DropdownMenuItem>
+                                    </>
+                                  )}
+                                  {!isAdmin && !isModerator && (
+                                    <>
+                                      <DropdownMenuItem
+                                        onClick={() =>
+                                          handleUpdateRole(
+                                            user.id,
+                                            "moderator",
+                                          )
+                                        }
+                                        className="text-xs font-medium cursor-pointer gap-2 text-botanical-800"
+                                      >
+                                        <UserCheck className="h-3.5 w-3.5 text-sage-600" />
+                                        <span>Promote to Moderator</span>
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() =>
+                                          handleUpdateRole(
+                                            user.id,
+                                            "admin",
+                                          )
+                                        }
+                                        className="text-xs font-medium cursor-pointer gap-2 text-botanical-800"
+                                      >
+                                        <ShieldCheck className="h-3.5 w-3.5 text-botanical-700" />
+                                        <span>Promote to Admin</span>
+                                      </DropdownMenuItem>
+                                    </>
                                   )}
                                 </DropdownMenuGroup>
                               )}

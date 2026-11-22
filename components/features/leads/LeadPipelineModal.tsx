@@ -39,6 +39,14 @@ import {
   Clock,
   Layers,
   X,
+  CircleDot,
+  Flame,
+  UserX,
+  Trophy,
+  Ban,
+  ArrowUp,
+  ArrowDown,
+  Equal,
 } from "lucide-react";
 
 interface LeadPipelineModalProps {
@@ -227,43 +235,64 @@ export function LeadPipelineModal({
                       value="uncontacted"
                       disabled={!isStatusTransitionAllowed(lead.status, "uncontacted")}
                     >
-                      🔵 Uncontacted (New)
+                      <div className="flex items-center gap-2">
+                        <CircleDot className="h-3.5 w-3.5 text-stone-500 shrink-0" />
+                        <span>Uncontacted (New)</span>
+                      </div>
                     </SelectItem>
                     <SelectItem
                       value="called"
                       disabled={!isStatusTransitionAllowed(lead.status, "called")}
                     >
-                      📞 Called (Attempted)
+                      <div className="flex items-center gap-2">
+                        <PhoneCall className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                        <span>Called (Attempted)</span>
+                      </div>
                     </SelectItem>
                     <SelectItem
                       value="call_later"
                       disabled={!isStatusTransitionAllowed(lead.status, "call_later")}
                     >
-                      ⏰ Call Later (Follow-Up)
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                        <span>Call Later (Follow-Up)</span>
+                      </div>
                     </SelectItem>
                     <SelectItem
                       value="interested"
                       disabled={!isStatusTransitionAllowed(lead.status, "interested")}
                     >
-                      🔥 Interested (Hot)
+                      <div className="flex items-center gap-2">
+                        <Flame className="h-3.5 w-3.5 text-rose-600 shrink-0" />
+                        <span>Interested (Hot)</span>
+                      </div>
                     </SelectItem>
                     <SelectItem
                       value="not_interested"
                       disabled={!isStatusTransitionAllowed(lead.status, "not_interested")}
                     >
-                      🚫 Not Interested
+                      <div className="flex items-center gap-2">
+                        <UserX className="h-3.5 w-3.5 text-stone-500 shrink-0" />
+                        <span>Not Interested</span>
+                      </div>
                     </SelectItem>
                     <SelectItem
                       value="converted"
                       disabled={!isStatusTransitionAllowed(lead.status, "converted")}
                     >
-                      🎉 Converted (Deal Won)
+                      <div className="flex items-center gap-2">
+                        <Trophy className="h-3.5 w-3.5 text-teal-600 shrink-0" />
+                        <span>Converted (Deal Won)</span>
+                      </div>
                     </SelectItem>
                     <SelectItem
                       value="invalid"
                       disabled={!isStatusTransitionAllowed(lead.status, "invalid")}
                     >
-                      ❌ Invalid / Dead
+                      <div className="flex items-center gap-2">
+                        <Ban className="h-3.5 w-3.5 text-zinc-500 shrink-0" />
+                        <span>Invalid / Dead</span>
+                      </div>
                     </SelectItem>
                   </SelectContent>
                 </Select>
@@ -284,9 +313,24 @@ export function LeadPipelineModal({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="high">🔥 High Priority (Urgent)</SelectItem>
-                    <SelectItem value="medium">⚡ Medium Priority</SelectItem>
-                    <SelectItem value="low">❄️ Low Priority</SelectItem>
+                    <SelectItem value="high">
+                      <div className="flex items-center gap-2 text-rose-700">
+                        <ArrowUp className="h-3.5 w-3.5 text-rose-600 shrink-0" />
+                        <span>High Priority</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="medium">
+                      <div className="flex items-center gap-2 text-amber-800">
+                        <Equal className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                        <span>Medium Priority</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="low">
+                      <div className="flex items-center gap-2 text-stone-700">
+                        <ArrowDown className="h-3.5 w-3.5 text-stone-500 shrink-0" />
+                        <span>Low Priority</span>
+                      </div>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>

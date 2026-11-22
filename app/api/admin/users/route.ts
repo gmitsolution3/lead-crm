@@ -200,7 +200,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // 3. ACTION: UPDATE ROLE
-    if (role && ["admin", "user"].includes(role)) {
+    if (role && ["admin", "moderator", "user"].includes(role)) {
       if (userId === session.user.id && role !== "admin") {
         return NextResponse.json(
           { error: "Cannot demote your own administrator account" },
@@ -224,12 +224,15 @@ export async function PATCH(request: NextRequest) {
         );
       }
 
+      const roleMessages: Record<string, string> = {
+        admin: "User promoted to Administrator successfully.",
+        moderator: "User promoted to Moderator successfully. Login access granted.",
+        user: "User demoted to pending user status.",
+      };
+
       return NextResponse.json({
         success: true,
-        message:
-          role === "admin"
-            ? "User promoted to Administrator successfully."
-            : "User demoted to pending user.",
+        message: roleMessages[role] || `User role updated to ${role} successfully.`,
       });
     }
 
