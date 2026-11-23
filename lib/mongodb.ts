@@ -1,18 +1,8 @@
 import { MongoClient, MongoClientOptions, Db } from "mongodb";
 
-function getConnectionString(): string {
-  const { MONGO_URI, DB_USERNAME, DB_PASSWORD } = process.env;
-  let uri =
-    MONGO_URI ||
-    "mongodb+srv://gmitsolution3_db_user:RCqvfiwMcAZ3hVc5@gm-lead-generator-clust.inyzidt.mongodb.net/gm-lead-generator";
-
-  if (DB_USERNAME && DB_PASSWORD && uri.includes("<username>") && uri.includes("<password>")) {
-    uri = uri
-      .replace("<username>", encodeURIComponent(DB_USERNAME))
-      .replace("<password>", encodeURIComponent(DB_PASSWORD));
-  }
-
-  return uri;
+const uri = process.env.MONGO_URI;
+if (!uri) {
+  throw new Error("MONGO_URI is not set in environment variables");
 }
 
 const MONGO_OPTIONS: MongoClientOptions = {
@@ -66,7 +56,7 @@ export function getMongoClient(): MongoClient {
         // ignore
       }
     }
-    globalWithMongo._mongoClient = new MongoClient(getConnectionString(), MONGO_OPTIONS);
+    globalWithMongo._mongoClient = new MongoClient(uri!, MONGO_OPTIONS);
   }
   return globalWithMongo._mongoClient;
 }

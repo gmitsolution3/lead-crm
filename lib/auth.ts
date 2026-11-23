@@ -11,9 +11,7 @@ export const auth = betterAuth({
   database: mongodbAdapter(db, {
     client,
   }),
-  secret:
-    process.env.BETTER_AUTH_SECRET ||
-    "5ea07b6d10147f98d065148ff76096c610181cf2da6e63e4d288b4051260271a",
+  secret: process.env.BETTER_AUTH_SECRET,
   baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
 
   user: {
