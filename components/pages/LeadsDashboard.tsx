@@ -248,6 +248,10 @@ export default function LeadsDashboard({
 
   const groupQuery = group?.query || decodedId;
   const targetGroupId = group?.groupId || decodedId;
+  const fallbackTargetGroup = useMemo(
+    () => ({ groupId: targetGroupId, query: groupQuery }),
+    [targetGroupId, groupQuery]
+  );
 
   // 2. Table filters, search, sort, and pagination state initialized from URL query params
   const initialSearch = searchParams?.get("search") || "";
@@ -2040,9 +2044,7 @@ export default function LeadsDashboard({
       <LeadFormModal
         isOpen={isAddLeadOpen}
         onClose={() => setIsAddLeadOpen(false)}
-        targetGroup={
-          group || { groupId: targetGroupId, query: groupQuery }
-        }
+        targetGroup={group || fallbackTargetGroup}
         onSuccess={() => {
           refetchLeads();
           refetchGroup();

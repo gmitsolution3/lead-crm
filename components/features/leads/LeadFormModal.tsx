@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Lead, SearchGroup } from "@/types";
 import {
   Sheet,
@@ -84,16 +84,19 @@ interface LeadFormModalProps {
   onSuccess?: (lead: any) => void;
 }
 
+const EMPTY_GROUPS: SearchGroup[] = [];
+
 export function LeadFormModal({
   isOpen,
   onClose,
   targetGroup,
-  searchGroups = [],
+  searchGroups = EMPTY_GROUPS,
   onSuccess,
 }: LeadFormModalProps) {
   const { data: session } = useSession();
   const queryClient = useQueryClient();
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const prevIsOpenRef = useRef(false);
 
   const { mutateAsync: saveLeadMutation, isPending: isSaving } = usePost(
     "/leads/save",
@@ -142,7 +145,8 @@ export function LeadFormModal({
   const currentWebsite = watch("website");
 
   useEffect(() => {
-    if (isOpen) {
+    // Only reset the form fields when transitioning from closed to open
+    if (isOpen && !prevIsOpenRef.current) {
       reset({
         name: "",
         source: "Manual",
@@ -163,7 +167,8 @@ export function LeadFormModal({
       });
       setSubmitError(null);
     }
-  }, [isOpen, targetGroup, searchGroups, reset]);
+    prevIsOpenRef.current = isOpen;
+  }, [isOpen, targetGroup?.groupId, targetGroup?.query, searchGroups, reset]);
 
   const sources = [
     "Manual",
