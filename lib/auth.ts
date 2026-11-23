@@ -4,11 +4,13 @@ import { admin, bearer } from "better-auth/plugins";
 import { nextCookies } from "better-auth/next-js";
 import { APIError } from "better-auth/api";
 import { ObjectId } from "mongodb";
-import { db } from "./mongodb";
+import { client, db } from "./mongodb";
 import { sendPasswordResetEmail } from "./email";
 
 export const auth = betterAuth({
-  database: mongodbAdapter(db),
+  database: mongodbAdapter(db, {
+    client,
+  }),
   secret:
     process.env.BETTER_AUTH_SECRET ||
     "5ea07b6d10147f98d065148ff76096c610181cf2da6e63e4d288b4051260271a",

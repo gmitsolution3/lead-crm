@@ -3,7 +3,7 @@ import AdminDashboard from "@/components/pages/AdminDashboard";
 import ModeratorDashboard from "@/components/pages/ModeratorDashboard";
 import UserDashboard from "@/components/pages/UserDashboard";
 
-export const instant = false;
+export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const session = await requireAuth({

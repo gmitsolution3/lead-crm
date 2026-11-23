@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { requireAuth } from "@/lib/auth-guard";
 import LeadsGroupDashboard from "@/components/pages/LeadsGroupDashboard";
 
-export const instant = false;
+export const dynamic = "force-dynamic";
 
 export default async function LeadsGroupPage() {
   const session = await requireAuth({
