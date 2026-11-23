@@ -1,8 +1,6 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { db } from "@/lib/mongodb";
-import { ObjectId } from "mongodb";
 
 export interface GuardOptions {
   /**
@@ -22,8 +20,8 @@ export interface GuardOptions {
 
 /**
  * Server-side Authentication & Authorization Guard.
- * Checks session, MongoDB ban status, and role permissions.
- * Redirects unauthorized users automatically before rendering server components.
+ * Directly utilizes the authenticated session payload from Better Auth.
+ * Avoids redundant per-navigation database queries and gracefully redirects on session errors.
  */
 export async function requireAuth(options: GuardOptions = {}) {
   const { allowedRoles = ["admin", "moderator", "user"], requiredRole, redirectTo = "/login" } = options;
@@ -47,64 +45,28 @@ export async function requireAuth(options: GuardOptions = {}) {
     redirect(redirectTo);
   }
 
-  // 2. Fetch authoritative user record from MongoDB
-  try {
-    let userQuery: any = { id: session.user.id };
-    if (ObjectId.isValid(session.user.id)) {
-      userQuery = {
-        $or: [
-          { _id: new ObjectId(session.user.id) },
-          { id: session.user.id },
-          { _id: session.user.id },
-        ],
-      };
-    }
+  // 2. Check if user is banned
+  if ((session.user as any).banned) {
+    redirect(`${redirectTo}?error=banned`);
+  }
 
-    const dbUser = await db.collection("user").findOne(userQuery);
+  // 3. Role Authorization check
+  const userRole = ((session.user as any).role || "user").toLowerCase();
 
-    if (!dbUser) {
-      redirect(`${redirectTo}?error=notfound`);
-    }
+  // If specific single role is required
+  if (requiredRole && userRole !== requiredRole.toLowerCase()) {
+    redirect(`${redirectTo}?error=unauthorized`);
+  }
 
-    // 3. Check if user is banned
-    if (dbUser.banned) {
-      redirect(`${redirectTo}?error=banned`);
-    }
-
-    // 4. Role Authorization check
-    const userRole = (dbUser.role || (session.user as any).role || "user").toLowerCase();
-
-    // If specific single role is required
-    if (requiredRole && userRole !== requiredRole.toLowerCase()) {
+  // If a list of allowed roles is specified
+  if (allowedRoles && allowedRoles.length > 0) {
+    const normalizedAllowed = allowedRoles.map((r) => r.toLowerCase());
+    if (!normalizedAllowed.includes(userRole)) {
       redirect(`${redirectTo}?error=unauthorized`);
     }
-
-    // If a list of allowed roles is specified
-    if (allowedRoles && allowedRoles.length > 0) {
-      const normalizedAllowed = allowedRoles.map((r) => r.toLowerCase());
-      if (!normalizedAllowed.includes(userRole)) {
-        redirect(`${redirectTo}?error=unauthorized`);
-      }
-    }
-
-    return {
-      ...session,
-      user: {
-        ...session.user,
-        role: userRole,
-        phone: dbUser.phone || "",
-        image: dbUser.image || session.user.image || null,
-        imagePublicId: dbUser.imagePublicId || null,
-      },
-    };
-  } catch (err: any) {
-    if (err?.digest?.startsWith("NEXT_REDIRECT")) {
-      throw err;
-    }
-    console.error("requireAuth: Database verification error:", err);
-    // If DB check fails, redirect safely to prevent 500 error page crash
-    redirect(redirectTo);
   }
+
+  return session;
 }
 
 /**
@@ -131,6 +93,5 @@ export async function requireGuest(redirectTo = "/") {
     if (err?.digest?.startsWith("NEXT_REDIRECT")) {
       throw err;
     }
-    // Allow guest access if session cannot be determined
   }
 }
