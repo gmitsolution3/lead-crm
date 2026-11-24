@@ -539,7 +539,7 @@ export default function AdminDashboard({
               <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-[11px] text-stone-500">
                 <span className="inline-flex items-center gap-1.5">
                   <span className="h-2.5 w-2.5 rounded-xs bg-botanical-700" />{" "}
-                  Met Target ({`≥ ${trendAnalytics.periodBenchmark}`})
+                  Target Met
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <span className="h-2.5 w-2.5 rounded-xs bg-terracotta-500" />{" "}
@@ -547,7 +547,7 @@ export default function AdminDashboard({
                 </span>
                 <span className="inline-flex items-center gap-1.5 font-medium text-stone-600">
                   <span className="w-3.5 h-0.5 border-t-2 border-dashed border-terracotta-600" />{" "}
-                  Benchmark ({trendAnalytics.periodBenchmark}/
+                  Target Benchmark ({trendAnalytics.periodBenchmark}/
                   {trendAnalytics.benchmarkUnitLabel})
                 </span>
               </div>
@@ -602,6 +602,13 @@ export default function AdminDashboard({
                           title={bucket.tooltipText}
                           className="flex-1 min-w-[14px] max-w-[28px] flex flex-col items-center h-full justify-end group relative cursor-pointer"
                         >
+                          {/* Floating Hover Badge */}
+                          <div className="absolute -top-9 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-20 pointer-events-none whitespace-nowrap bg-stone-900 text-stone-100 text-[9px] px-2 py-0.5 rounded shadow-md font-medium">
+                            {bucket.count}/{bucket.target || trendAnalytics.periodBenchmark}
+                            <span className={`ml-1 font-bold ${bucket.metTarget ? "text-emerald-400" : "text-amber-300"}`}>
+                              ({bucket.progressPercent ?? Math.round((bucket.count / (bucket.target || 1)) * 100)}%)
+                            </span>
+                          </div>
                           <span className="text-[8px] font-bold text-stone-600 mb-1 opacity-0 group-hover:opacity-100 sm:opacity-100 transition-opacity whitespace-nowrap">
                             {bucket.count > 0 ? bucket.count : ""}
                           </span>
@@ -653,10 +660,20 @@ export default function AdminDashboard({
                       <div
                         key={bucket.key}
                         title={bucket.tooltipText}
-                        className="flex flex-col items-center h-full justify-end group cursor-pointer"
+                        className="flex flex-col items-center h-full justify-end group relative cursor-pointer"
                       >
+                        {/* Floating Hover Badge */}
+                        <div className="absolute -top-9 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-20 pointer-events-none whitespace-nowrap bg-stone-900 text-stone-100 text-[10px] px-2 py-0.5 rounded shadow-md font-medium">
+                          {bucket.count} / {bucket.target || trendAnalytics.periodBenchmark}
+                          <span className={`ml-1 font-bold ${bucket.metTarget ? "text-emerald-400" : "text-amber-300"}`}>
+                            ({bucket.progressPercent ?? Math.round((bucket.count / (bucket.target || 1)) * 100)}%)
+                          </span>
+                        </div>
                         <span className="text-[10px] font-bold text-stone-600 mb-1 transition-opacity">
                           {bucket.count}
+                          {adminTimeframe === "7d" && bucket.target ? (
+                            <span className="text-[9px] font-medium text-stone-400">/{bucket.target}</span>
+                          ) : null}
                         </span>
                         <div
                           className={`w-full bg-oatmeal-200 rounded-t-lg overflow-hidden flex flex-col justify-end h-full ${
