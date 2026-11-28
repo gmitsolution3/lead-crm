@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Sheet,
   SheetContent,
@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Lead } from "@/types";
+import { usePatch } from "@/hooks";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import {
   Mail,
@@ -48,10 +49,21 @@ export function LeadDetailSheet({
   lead,
   isOpen,
   onClose,
+  onLeadUpdated,
   onDeleteLead,
 }: LeadDetailSheetProps) {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [showOlderNotes, setShowOlderNotes] = useState(false);
+  const [localWhatsapp, setLocalWhatsapp] = useState<string>("");
+
+  const { mutateAsync: updateLeadMutation, isPending: isSavingWhatsapp } =
+    usePatch("/leads", {
+      invalidateQueries: [["/leads"], ["/search-groups"]],
+    });
+
+  useEffect(() => {
+    setLocalWhatsapp(lead?.whatsapp || "");
+  }, [lead?.id, lead?.whatsapp]);
 
   const sortedNotes = useMemo(() => {
     if (!lead?.notes || lead.notes.length === 0) return [];
@@ -485,29 +497,109 @@ export function LeadDetailSheet({
 
             <div className="grid grid-cols-2 gap-3">
               {/* WhatsApp */}
-              <div className="rounded-xl border border-stone-200 bg-paper p-3 flex items-center justify-between shadow-sm">
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
-                    <WhatsAppIcon className="h-4 w-4" />
+              <div className="rounded-xl border border-stone-200 bg-paper p-3 flex flex-col justify-between gap-2 shadow-sm col-span-2 sm:col-span-1">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+                      <WhatsAppIcon className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-semibold text-stone-500 flex items-center gap-1.5">
+                        <span>WhatsApp</span>
+                        {localWhatsapp && (
+                          <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold text-emerald-800">
+                            Verified ✓
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-xs font-medium text-stone-800 truncate">
+                        {localWhatsapp || (lead.phone ? "Unchecked" : "None")}
+                      </p>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-semibold text-stone-500">
-                      WhatsApp
-                    </p>
-                    <p className="text-xs font-medium text-stone-800 truncate">
-                      {lead.whatsapp || "None"}
-                    </p>
-                  </div>
+                  {localWhatsapp && (
+                    <a
+                      href={`https://wa.me/${localWhatsapp.replace(/[^0-9]/g, "")}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-emerald-700 hover:text-emerald-800 cursor-pointer p-1 shrink-0"
+                      title="Open WhatsApp chat"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  )}
                 </div>
-                {lead.whatsapp && (
-                  <a
-                    href={`https://wa.me/${lead.whatsapp.replace(/[^0-9]/g, "")}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-stone-400 hover:text-emerald-700 cursor-pointer p-1"
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </a>
+
+                {!localWhatsapp && lead.phone && (
+                  <div className="flex items-center gap-1.5 pt-1 border-t border-stone-100">
+                    <a
+                      href={`https://wa.me/${lead.phone.replace(/[^0-9]/g, "")}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex-1 inline-flex items-center justify-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50/80 hover:bg-emerald-100 px-2 py-1 text-[10px] font-semibold text-emerald-800 transition-colors"
+                    >
+                      <span>Check on WA</span>
+                      <ExternalLink className="h-2.5 w-2.5" />
+                    </a>
+                    <button
+                      type="button"
+                      disabled={isSavingWhatsapp}
+                      onClick={async () => {
+                        const targetId = lead.leadId || lead.id;
+                        if (!targetId || !lead.phone) return;
+                        try {
+                          await updateLeadMutation({
+                            id: targetId,
+                            data: { whatsapp: lead.phone },
+                          });
+                          setLocalWhatsapp(lead.phone);
+                          onLeadUpdated?.({ ...lead, whatsapp: lead.phone });
+                        } catch (err) {
+                          console.error("Failed to mark WhatsApp:", err);
+                        }
+                      }}
+                      className="inline-flex items-center justify-center gap-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 px-2 py-1 text-[10px] font-semibold text-white cursor-pointer transition-colors"
+                      title="Save phone number as verified WhatsApp"
+                    >
+                      <Check className="h-2.5 w-2.5" />
+                      <span>Has WA</span>
+                    </button>
+                  </div>
+                )}
+
+                {localWhatsapp && (
+                  <div className="flex items-center justify-between pt-1 border-t border-stone-100">
+                    <a
+                      href={`https://wa.me/${localWhatsapp.replace(/[^0-9]/g, "")}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[10px] font-semibold text-emerald-700 hover:underline flex items-center gap-1"
+                    >
+                      <span>Open Chat</span>
+                      <ExternalLink className="h-2.5 w-2.5" />
+                    </a>
+                    <button
+                      type="button"
+                      disabled={isSavingWhatsapp}
+                      onClick={async () => {
+                        const targetId = lead.leadId || lead.id;
+                        if (!targetId) return;
+                        try {
+                          await updateLeadMutation({
+                            id: targetId,
+                            data: { whatsapp: "" },
+                          });
+                          setLocalWhatsapp("");
+                          onLeadUpdated?.({ ...lead, whatsapp: "" });
+                        } catch (err) {
+                          console.error("Failed to unmark WhatsApp:", err);
+                        }
+                      }}
+                      className="text-[10px] font-medium text-stone-400 hover:text-rose-600 cursor-pointer"
+                    >
+                      Unmark
+                    </button>
+                  </div>
                 )}
               </div>
 

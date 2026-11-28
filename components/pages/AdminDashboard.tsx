@@ -96,6 +96,8 @@ export default function AdminDashboard({
 
   // Safe fallback values from backend aggregation
   const dailyTarget = adminData?.dailyTarget || 25;
+  const perModeratorTarget = adminData?.perModeratorTarget || dailyTarget;
+  const moderatorCount = adminData?.moderatorCount || 1;
   const velocity = adminData?.velocity || {
     todayCount: 0,
     yesterdayCount: 0,
@@ -274,7 +276,9 @@ export default function AdminDashboard({
                 </span>
               </div>
               <p className="text-[11px] text-emerald-700 font-semibold mt-0.5">
-                {velocity.progressPercent}% of daily quota
+                {velocity.progressPercent}% of team quota ({moderatorCount}{" "}
+                {moderatorCount === 1 ? "moderator" : "moderators"} ×{" "}
+                {perModeratorTarget}/day)
               </p>
             </div>
             <div className="space-y-1 pt-1 border-t border-stone-100 text-[11px] text-stone-500 flex items-center justify-between">
@@ -775,10 +779,11 @@ export default function AdminDashboard({
                   <div className="space-y-1.5 pt-1">
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-stone-500">
-                        Today&apos;s Approaches
+                        Meaningful Contacts
                       </span>
                       <span className="font-bold text-botanical-900">
-                        {member.todayTouches} / {dailyTarget}
+                        {member.meaningfulContactsToday ?? member.todayTouches} /{" "}
+                        {perModeratorTarget}
                       </span>
                     </div>
                     <div className="w-full bg-oatmeal-200 rounded-full h-2 overflow-hidden">
@@ -812,6 +817,28 @@ export default function AdminDashboard({
                           {member.toGo} to go
                         </span>
                       )}
+                    </div>
+
+                    {/* Activity Breakdown */}
+                    <div className="grid grid-cols-3 gap-1.5 pt-2 mt-2 border-t border-stone-100 text-center">
+                      <div className="rounded-lg bg-oatmeal-100/70 px-1.5 py-1">
+                        <div className="text-[11px] font-bold text-botanical-900">
+                          {member.attemptsToday ?? member.todayTouches}
+                        </div>
+                        <div className="text-[9px] text-stone-500">Attempts</div>
+                      </div>
+                      <div className="rounded-lg bg-emerald-50/70 px-1.5 py-1">
+                        <div className="text-[11px] font-bold text-emerald-800">
+                          {member.qualifiedToday ?? 0}
+                        </div>
+                        <div className="text-[9px] text-emerald-700">Qualified</div>
+                      </div>
+                      <div className="rounded-lg bg-stone-100/80 px-1.5 py-1">
+                        <div className="text-[11px] font-bold text-stone-800">
+                          {member.reachRate ?? 0}%
+                        </div>
+                        <div className="text-[9px] text-stone-500">Reach Rate</div>
+                      </div>
                     </div>
                   </div>
                 </div>

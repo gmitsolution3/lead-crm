@@ -230,7 +230,7 @@ export default function SettingsDashboard({ user: initialUser }: SettingsDashboa
       await refetchSettings();
       setKpiFeedback({
         type: "success",
-        message: `Workspace settings updated successfully! Daily approach target: ${values.dailyApproachTarget} leads/day.`,
+        message: `Workspace KPI target updated! Meaningful contact target: ${values.dailyApproachTarget} leads/day.`,
       });
       setTimeout(() => setKpiFeedback(null), 4000);
     } catch (err: any) {
@@ -884,7 +884,7 @@ export default function SettingsDashboard({ user: initialUser }: SettingsDashboa
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
                   <div className="space-y-1.5">
                     <Label className="text-xs font-semibold text-stone-700">
-                      Target Client Approaches / Day (per Moderator)
+                      Meaningful Lead Interaction Target / Day (per Moderator)
                     </Label>
                     <div className="relative">
                       <Input
@@ -904,7 +904,7 @@ export default function SettingsDashboard({ user: initialUser }: SettingsDashboa
                       </p>
                     ) : (
                       <p className="text-[11px] text-stone-400">
-                        Standard recommendation: 25 calls/contacts per day.
+                        Counts reached outcomes (Call Later, Interested, Converted, Not Interested).
                       </p>
                     )}
                   </div>
@@ -930,7 +930,7 @@ export default function SettingsDashboard({ user: initialUser }: SettingsDashboa
                 <div className="rounded-xl bg-oatmeal-100/70 border border-stone-200/70 p-3.5 text-xs text-stone-600 flex items-start gap-2.5">
                   <TrendingUp className="h-4 w-4 text-terracotta-600 shrink-0 mt-0.5" />
                   <p className="leading-relaxed">
-                    Moderators will see a live progress gauge on their overview dashboard tracking their completed touches against this <strong>{currentDailyTarget} leads/day</strong> goal, including immediate motivational counts showing how many leads remain to hit quota.
+                    Only meaningful interactions (where the customer was reached) count toward this <strong>{currentDailyTarget} leads/day</strong> target. Unanswered calls (<code>called</code>) are tracked separately as dial attempts without inflating KPIs.
                   </p>
                 </div>
               </form>

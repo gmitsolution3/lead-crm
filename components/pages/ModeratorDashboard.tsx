@@ -79,15 +79,26 @@ export default function ModeratorDashboard({
 
   const kpiStats = dashboardData?.kpiStats || {
     dailyTarget: 25,
+    dailyCallTarget: 40,
+    dailyQualifiedTarget: 5,
+    dailyConversionTarget: 1,
+    isCustomTarget: false,
     todayCount: 0,
     moderatorTodayCount: 0,
+    attemptsToday: 0,
+    qualifiedToday: 0,
+    convertedToday: 0,
+    reachRate: 0,
     yesterdayCount: 0,
     remainingToGo: 25,
     progressPercent: 0,
     isTargetMet: false,
     calledToday: 0,
     interestedToday: 0,
+    interestedOnlyToday: 0,
     callLaterToday: 0,
+    notInterestedToday: 0,
+    invalidToday: 0,
   };
 
   const todayFollowUps: any[] = dashboardData?.todayFollowUps || [];
@@ -635,35 +646,80 @@ export default function ModeratorDashboard({
                   )}
                 </div>
                 <p className="text-[11px] text-stone-500 leading-relaxed">
-                  Calls logged through the outcome modal automatically
-                  count toward this target.
+                  Only reached outcomes (Call Later, Interested, Converted, Not
+                  Interested) count as Meaningful Contacts. Unanswered calls
+                  count toward Dial Attempts.
                 </p>
               </div>
 
-              {/* Touchpoint Breakdown Counters */}
-              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-stone-100 text-center">
-                <div className="rounded-lg bg-oatmeal-100/60 p-2">
-                  <span className="text-xs font-bold text-botanical-900">
+              {/* Today's Contacted vs Meaningful Summary */}
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-stone-100 text-center">
+                <div className="rounded-lg bg-stone-100/80 p-2 border border-stone-200/70">
+                  <span className="text-sm font-extrabold text-botanical-900">
+                    {kpiStats.attemptsToday ?? 0}
+                  </span>
+                  <p className="text-[10px] font-medium text-stone-500 mt-0.5">
+                    Total Contacted ({kpiStats.reachRate ?? 0}% reach)
+                  </p>
+                </div>
+                <div className="rounded-lg bg-botanical-50/80 p-2 border border-botanical-200/70">
+                  <span className="text-sm font-extrabold text-botanical-900">
+                    {kpiStats.moderatorTodayCount} / {kpiStats.dailyTarget}
+                  </span>
+                  <p className="text-[10px] font-medium text-botanical-800 mt-0.5">
+                    Meaningful Interactions
+                  </p>
+                </div>
+              </div>
+
+              {/* Complete Outcome Breakdown */}
+              <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-stone-100 text-center">
+                <div className="rounded-lg bg-oatmeal-100/70 p-2 border border-stone-200/60">
+                  <span className="text-xs font-bold text-stone-800">
                     {kpiStats.calledToday}
                   </span>
                   <p className="text-[10px] text-stone-500 mt-0.5">
-                    Calls
+                    Called (No Ans)
                   </p>
                 </div>
-                <div className="rounded-lg bg-emerald-50/60 p-2">
-                  <span className="text-xs font-bold text-emerald-800">
-                    {kpiStats.interestedToday}
+                <div className="rounded-lg bg-amber-50/70 p-2 border border-amber-200/60">
+                  <span className="text-xs font-bold text-amber-900">
+                    {kpiStats.callLaterToday}
+                  </span>
+                  <p className="text-[10px] text-amber-700 mt-0.5">
+                    Call Later
+                  </p>
+                </div>
+                <div className="rounded-lg bg-emerald-50/70 p-2 border border-emerald-200/60">
+                  <span className="text-xs font-bold text-emerald-900">
+                    {kpiStats.interestedOnlyToday ?? kpiStats.interestedToday}
                   </span>
                   <p className="text-[10px] text-emerald-700 mt-0.5">
                     Interested
                   </p>
                 </div>
-                <div className="rounded-lg bg-amber-50/60 p-2">
-                  <span className="text-xs font-bold text-amber-800">
-                    {kpiStats.callLaterToday}
+                <div className="rounded-lg bg-botanical-50/80 p-2 border border-botanical-200/60">
+                  <span className="text-xs font-bold text-botanical-900">
+                    {kpiStats.convertedToday ?? 0}
                   </span>
-                  <p className="text-[10px] text-amber-700 mt-0.5">
-                    Follow-ups
+                  <p className="text-[10px] text-botanical-800 mt-0.5">
+                    Converted
+                  </p>
+                </div>
+                <div className="rounded-lg bg-rose-50/70 p-2 border border-rose-200/60">
+                  <span className="text-xs font-bold text-rose-800">
+                    {kpiStats.notInterestedToday ?? 0}
+                  </span>
+                  <p className="text-[10px] text-rose-700 mt-0.5">
+                    Rejected
+                  </p>
+                </div>
+                <div className="rounded-lg bg-stone-100/70 p-2 border border-stone-200/60">
+                  <span className="text-xs font-bold text-stone-700">
+                    {kpiStats.invalidToday ?? 0}
+                  </span>
+                  <p className="text-[10px] text-stone-500 mt-0.5">
+                    Bad Lead
                   </p>
                 </div>
               </div>
